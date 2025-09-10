@@ -1,15 +1,23 @@
 # OCC1950
 
-## Medium sample (10_000)
+## Medium sample, uniques (10_000)
 
 ```
-set CUDA_VISIBLE_DEVICES=2
 python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-occ1950-n=10k-ft --target-cols OCC1950_1 OCC1950_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_OCC1950_IPUMS_US_n_unq10000_train.csv --batch-size 512 --log-wandb --wandb-project-name occ-canine-ft-v3
 ```
 
 ```
-set CUDA_VISIBLE_DEVICES=2
 python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-occ1950-n=10k-ft-frz-enc --target-cols OCC1950_1 OCC1950_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_OCC1950_IPUMS_US_n_unq10000_train.csv --batch-size 512 --freeze-encoder --log-wandb --wandb-project-name occ-canine-ft-v3
+```
+
+## Medium sample, random (10_000)
+
+```
+python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-occ1950-n=10k-r-ft --target-cols OCC1950_1 OCC1950_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_OCC1950_IPUMS_US_n10000_train.csv --batch-size 512 --log-wandb --wandb-project-name occ-canine-ft-v3
+```
+
+```
+python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-occ1950-n=10k-r-ft-frz-enc --target-cols OCC1950_1 OCC1950_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_OCC1950_IPUMS_US_n10000_train.csv --batch-size 512 --freeze-encoder --log-wandb --wandb-project-name occ-canine-ft-v3
 ```
 
 ## Full sample (18M)
@@ -63,11 +71,11 @@ python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-psti
 
 # PST2
 
-This is currently handheld to handle that not all keys are present in training data.
+This is currently handheld to ensure key completeness.
 We thus run this script, stop upon data prep completion, manually construct keys, and then restarts.
 
 ```
-python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/pst2/mixer-psti --target-cols pst2_1 pst2_2 pst2_3 pst2_4 pst2_5 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 100 --block-size 8 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\pst2.csv --batch-size 512 --save-interval 5000 --save-interval 5000 --use-within-block-sep --drop-bad-labels --log-wandb --wandb-project-name pst2
+python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/pst2/mixer-pst2 --target-cols pst2_1 pst2_2 pst2_3 pst2_4 pst2_5 --warmup-steps 5000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 26 --block-size 8 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\pst2.csv --batch-size 512 --eval-interval 10000 --save-interval 5000 --use-within-block-sep --drop-bad-labels --log-wandb --wandb-project-name pst2
 ```
 
 # ISCO
@@ -76,14 +84,14 @@ python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/pst2/mixer-psti --targ
 python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-isco-ft --target-cols ISCO68A_1 ISCO68A_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 4 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_ISCO68_IPUMS_UK_train.csv --batch-size 512 --eval-interval 50000 --save-interval 10000 --log-wandb --wandb-project-name occ-canine-ft-v3
 ```
 
-## Medium sample (10_000)
+## Medium sample, random (10_000)
 
 ```
-python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-isco-n=10k-ft --target-cols ISCO68A_1 ISCO68A_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_ISCO68_IPUMS_UK_n_unq10000_train.csv --batch-size 512 --log-wandb --wandb-project-name occ-canine-ft-v3
+python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-isco-n=10k-r-ft --target-cols ISCO68A_1 ISCO68A_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_ISCO68_IPUMS_UK_n10000_train.csv --batch-size 512 --log-wandb --wandb-project-name occ-canine-ft-v3
 ```
 
 ```
-python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-isco-n=10k-ft-frz-enc --target-cols ISCO68A_1 ISCO68A_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_ISCO68_IPUMS_UK_n_unq10000_train.csv --batch-size 512 --freeze-encoder --log-wandb --wandb-project-name occ-canine-ft-v3
+python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-isco-n=10k-r-ft-frz-enc --target-cols ISCO68A_1 ISCO68A_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_ISCO68_IPUMS_UK_n10000_train.csv --batch-size 512 --freeze-encoder --log-wandb --wandb-project-name occ-canine-ft-v3
 ```
 
 # ICEM
@@ -93,14 +101,14 @@ set CUDA_VISIBLE_DEVICES=0
 python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-icem-ft --target-cols OCCICEM_1 OCCICEM_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 4 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_OCCICEM_IPUMS_UK_train.csv --batch-size 512 --eval-interval 10000 --save-interval 10000 --log-wandb --wandb-project-name occ-canine-ft-v3
 ```
 
-## Medium sample (10_000)
+## Medium sample, random (10_000)
 
 ```
-python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-icem-n=10k-ft --target-cols OCCICEM_1 OCCICEM_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_OCCICEM_IPUMS_UK_n_unq10000_train.csv --batch-size 512 --log-wandb --wandb-project-name occ-canine-ft-v3
+python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-icem-n=10k-r-ft --target-cols OCCICEM_1 OCCICEM_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_OCCICEM_IPUMS_UK_n10000_train.csv --batch-size 512 --log-wandb --wandb-project-name occ-canine-ft-v3
 ```
 
 ```
-python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-icem-n=10k-ft-frz-enc --target-cols OCCICEM_1 OCCICEM_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_OCCICEM_IPUMS_UK_n_unq10000_train.csv --batch-size 512 --freeze-encoder --log-wandb --wandb-project-name occ-canine-ft-v3
+python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/ft-tests-v3/mixer-icem-n=10k-r-ft-frz-enc --target-cols OCCICEM_1 OCCICEM_2 --warmup-steps 1000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 5689 --block-size 3 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\EN_OCCICEM_IPUMS_UK_n10000_train.csv --batch-size 512 --freeze-encoder --log-wandb --wandb-project-name occ-canine-ft-v3
 ```
 
 # HISCO
@@ -127,7 +135,7 @@ python eval_gp_mixer.py --val-data Z:\faellesmappe\tsdj\hisco\ft-tests-v3\mixer-
 ## PST2
 
 ```
-python eval_gp_mixer.py --val-data Z:\faellesmappe\tsdj\hisco\pst2\mixer-psti\data_val.csv --mapping Z:\faellesmappe\tsdj\hisco\pst2\mixer-psti\key.csv --checkpoint Z:\faellesmappe\tsdj\hisco\pst2\mixer-psti\last.bin --target-cols pst2_1 pst2_2 pst2_3 pst2_4 pst2_5 --block-size 8 --use-within-block-sep --fn-out Z:\faellesmappe\tsdj\hisco\pst2\mixer-psti\preds_val.csv
+python eval_gp_mixer.py --val-data Z:\faellesmappe\tsdj\hisco\pst2\mixer-pst2\data_val.csv --mapping Z:\faellesmappe\tsdj\hisco\pst2\mixer-pst2\key.csv --checkpoint Z:\faellesmappe\tsdj\hisco\pst2\mixer-pst2\last.bin --target-cols pst2_1 pst2_2 pst2_3 pst2_4 pst2_5 --block-size 8 --use-within-block-sep --fn-out Z:\faellesmappe\tsdj\hisco\pst2\mixer-pst2\preds_val.csv
 ```
 
 ## ISCO
