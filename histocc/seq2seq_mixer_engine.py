@@ -112,6 +112,7 @@ def train_one_epoch(
                 loss_fn=loss_fn,
                 device=device,
             )
+            model.train()
 
             update_summary(
                 current_step,
