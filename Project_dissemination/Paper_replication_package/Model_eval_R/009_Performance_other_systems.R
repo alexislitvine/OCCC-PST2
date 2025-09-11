@@ -13,7 +13,7 @@ source("Project_dissemination/Paper_replication_package/Model_eval_R/000_Functio
 
 # ==== Load data ====
 tl = TRUE  # Toyload for quick testing
-files_train = c("EN_ISCO68_IPUMS_UK_train.csv", "EN_ISCO68_IPUMS_UK_n_unq10000_train.csv", "EN_OCCICEM_IPUMS_UK_train.csv", "EN_OCCICEM_IPUMS_UK_n_unq10000_train.csv", "EN_OCC1950_IPUMS_US_train.csv", "EN_OCC1950_IPUMS_US_n_unq10000_train.csv")
+files_train = c("EN_ISCO68_IPUMS_UK_train.csv", "EN_ISCO68_IPUMS_UK_n_unq10000_train.csv", "EN_OCCICEM_IPUMS_UK_train.csv", "EN_OCCICEM_IPUMS_UK_n_unq10000_train.csv", "EN_OCC1950_IPUMS_US_train.csv", "EN_OCC1950_IPUMS_US_n_unq10000_train.csv", "EN_OCC1950_IPUMS_US_n_10000_train.csv")
 files_val1 = c("EN_ISCO68_IPUMS_UK_val1.csv", "EN_ISCO68_IPUMS_UK_n_unq10000_val1.csv", "EN_OCCICEM_IPUMS_UK_val1.csv", "EN_OCCICEM_IPUMS_UK_n_unq10000_val1.csv", "EN_OCC1950_IPUMS_US_val1.csv", "EN_OCC1950_IPUMS_US_n_unq10000_val1.csv")
 files_val2 = c("EN_ISCO68_IPUMS_UK_val2.csv", "EN_ISCO68_IPUMS_UK_n_unq10000_val2.csv", "EN_OCCICEM_IPUMS_UK_val2.csv", "EN_OCCICEM_IPUMS_UK_n_unq10000_val2.csv", "EN_OCC1950_IPUMS_US_val2.csv", "EN_OCC1950_IPUMS_US_n_unq10000_val2.csv")
 files_test = c("EN_ISCO68_IPUMS_UK_test.csv", "EN_OCCICEM_IPUMS_UK_test.csv", "EN_OCC1950_IPUMS_US_test.csv")
@@ -35,6 +35,8 @@ performance = foreach(f = performance_files, .combine = rbind) %do% {
             Training = case_when(
                 grepl("n_unq10000", File) ~ "10k unique strings",
                 grepl("n_unq10000_finetuning", File) ~ "10k unique strings (full finetuning)",
+                grepl("n_10000", File) ~ "10k total strings",
+                grepl("n_10000_finetuning", File) ~ "10k total strings (full finetuning)",
                 TRUE ~ "All data"
             ),
         )
@@ -88,9 +90,11 @@ perf2 = performance %>%
     System = tolower(System),
     SystemPretty = dplyr::recode(System, "isco68" = "ISCO-68", "occicem" = "OCCICEM", "occ1950" = "OCC1950"),
     Regime = dplyr::case_when(
-      grepl("_n_unq10000_full_finetuning", File) ~ "10k_full",   # Panel B
-      grepl("_n_unq10000", File) ~ "10k_frozen",                 # Panel C
-      TRUE ~ "full"                                              # Panel A
+      grepl("_n_10000_full_finetuning", File) ~ "10k_total (full finetuning)", # Panel D
+      grepl("_n_unq10000_full_finetuning", File) ~ "10k_full",   # Panel A
+      grepl("_n_unq10000", File) ~ "10k_frozen",                 # Panel B
+      grepl("_n_10000", File) ~ "10k_total",                     # Panel C
+      TRUE ~ "full"                                              # Panel E
     )
   )
 
@@ -162,8 +166,19 @@ panelC = dplyr::bind_rows(
   get_row("OCCICEM", "10k_frozen"),
   get_row("OCC1950", "10k_frozen")
 )
+panelD = dplyr::bind_rows(
+  get_row("ISCO-68", "10k_total"),
+  get_row("OCCICEM", "10k_total"),
+  get_row("OCC1950", "10k_total")
+)
+panelE = dplyr::bind_rows(
+  get_row("ISCO-68", "10k_total (full finetuning)"),
+  get_row("OCCICEM", "10k_total (full finetuning)"),
+  get_row("OCC1950", "10k_total (full finetuning)")
+)
 
-tab = dplyr::bind_rows(panelA, panelB, panelC)
+
+tab = dplyr::bind_rows(panelA, panelB, panelC, panelD, panelE)
 
 sink("Project_dissemination/Paper_replication_package/Tables/Performance_other_systems.txt")
 tab %>%
@@ -177,6 +192,8 @@ tab %>%
   kableExtra::pack_rows("\\textit{Panel A: Full training data (good decoder)}", 1, 3, italic = TRUE) %>%
   kableExtra::pack_rows("\\textit{Panel B: 10,000 unique strings (good decoder)}", 4, 6, italic = TRUE) %>%
   kableExtra::pack_rows("\\textit{Panel C: 10,000 unique strings, frozen encoder (good decoder)}", 7, 9, italic = TRUE) %>%
+  kableExtra::pack_rows("\\textit{Panel D: 10,000 total strings, frozen encoder (good decoder)}", 10, 12, italic = TRUE) %>%
+  kableExtra::pack_rows("\\textit{Panel E: 10,000 total strings (good decoder)}", 13, 15, italic = TRUE) %>%
   print()
 sink()
 
