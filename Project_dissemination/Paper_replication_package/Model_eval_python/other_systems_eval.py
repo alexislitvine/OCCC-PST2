@@ -3,14 +3,14 @@ import pandas as pd
 import glob
 import os
 
-def test_performance(file = "tmp.csv", n_obs=1000, mod_path = r"Y:\pc-to-Y\hisco\ft-models\mixer-icem-ft/last.bin", data_path=r"Z:\faellesmappe\tsdj\hisco\data/Test_data_other/EN_OCCICEM_IPUMS_UK_test.csv", system = "OCCICEM"):
+def test_performance(file = "tmp.csv", n_obs=1000, mod_path = "Data/models/mixer-icem-ft/last.bin", data_path="Data/Test_data_other/EN_OCCICEM_IPUMS_UK_test.csv", system = "OCCICEM"):
     # If file exists do nothing
     if os.path.exists(file):
         print(f"File {file} already exists. Skipping performance test.")
         return 0
 
     # Load the model
-    mod = OccCANINE(mod_path, hf = False, system = system, batch_size=32)
+    mod = OccCANINE(mod_path, hf = False, system = system, batch_size=256)
 
     # Load data
     df = pd.read_csv(data_path)
@@ -41,6 +41,19 @@ def test_performance(file = "tmp.csv", n_obs=1000, mod_path = r"Y:\pc-to-Y\hisco
         }])
     res.to_csv(file, index=False)
 
+    # Observation level metrics
+    preds[f"acc"] = eval_engine.accuracy(return_per_obs = True)
+    preds["precision"] = eval_engine.precision(return_per_obs = True)
+    preds["recall"] = eval_engine.recall(return_per_obs = True)
+    preds["f1"] = eval_engine.f1(return_per_obs = True)
+    preds["rowid"] = df.RowID
+    preds[f"true_{system}_1"] = df[f"{system}_1"]
+    preds[f"true_{system}_2"] = df[f"{system}_2"]
+    # Update file name and place in 'big_files/other_systems' instead
+    fname = file.replace("performance", "obs_performance")
+    fname = fname.replace("Data/Intermediate_data/other_systems", "Data/Intermediate_data/big_files/other_systems")
+    preds.to_csv(fname, index=False)
+
     return 0
 
 def main(toyrun=False):
@@ -48,34 +61,141 @@ def main(toyrun=False):
     Main function to load data, get predictions, and evaluate the model.
     """
     if toyrun:
-        n_obs = 100
+        n_obs = 10000
     else:
         n_obs = 10000000000
 
     # ICEM
     test_performance(
-        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/occicem_performance.csv",
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/occicem_performance.csv",
         n_obs=n_obs,
-        mod_path=r"Y:\pc-to-Y\hisco\ft-models\mixer-icem-ft/last.bin",
-        data_path=r"Z:\faellesmappe\tsdj\hisco\data/Test_data_other/EN_OCCICEM_IPUMS_UK_test.csv",
+        mod_path="Data/models/mixer-icem-ft/last.bin",
+        data_path="Data/Test_data_other/EN_OCCICEM_IPUMS_UK_test.csv",
+        system = "OCCICEM"
+    )
+
+    # ICEM with 10k unique training strings (frozen encoder)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/occicem_performance_n_unq10000.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-icem-n=10k-ft-frz-enc/last.bin",
+        data_path="Data/Test_data_other/EN_OCCICEM_IPUMS_UK_test.csv",
+        system = "OCCICEM"
+    )
+
+    # ICEM with 10k unique training strings (full finetuning)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/occicem_performance_n_unq10000_full_finetuning.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-icem-n=10k-ft/last.bin",
+        data_path="Data/Test_data_other/EN_OCCICEM_IPUMS_UK_test.csv",
+        system = "OCCICEM"
+    )
+
+    # ICEM with 10k (non-unique) training strings (frozen encoder)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/occicem_performance_n_10000.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-icem-n=10k-r-ft-frz-enc/last.bin",
+        data_path="Data/Test_data_other/EN_OCCICEM_IPUMS_UK_test.csv",
+        system = "OCCICEM"
+    )
+
+    # ICEM with 10k (non-unique) training strings (full finetuning)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/occicem_performance_n_10000_full_finetuning.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-icem-n=10k-r-ft/last.bin",
+        data_path="Data/Test_data_other/EN_OCCICEM_IPUMS_UK_test.csv",
         system = "OCCICEM"
     )
 
     # ISCO68
     test_performance(
-        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/isco68_performance.csv",
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/isco68_performance.csv",
         n_obs=n_obs,
-        mod_path=r"Y:\pc-to-Y\hisco\ft-models/mixer-isco-ft/last.bin",
-        data_path=r"Z:\faellesmappe\tsdj\hisco\data/Test_data_other/EN_ISCO68_IPUMS_UK_test.csv",
+        mod_path="Data/models/mixer-isco-ft/last.bin",
+        data_path="Data/Test_data_other/EN_ISCO68_IPUMS_UK_test.csv",
+        system = "ISCO68A"
+    )
+
+    # ISCO68 with 10k unique training strings (frozen encoder)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/isco68_performance_n_unq10000.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-isco-n=10k-ft-frz-enc/last.bin",
+        data_path="Data/Test_data_other/EN_ISCO68_IPUMS_UK_test.csv",
+        system = "ISCO68A"
+    )
+
+    # ISCO68 with 10k unique training strings (full finetuning)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/isco68_performance_n_unq10000_full_finetuning.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-isco-n=10k-ft/last.bin",
+        data_path="Data/Test_data_other/EN_ISCO68_IPUMS_UK_test.csv",
+        system = "ISCO68A"
+    )
+
+    # ISCO68 with 10k (non-unique) training strings (frozen encoder)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/isco68_performance_n_10000.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-isco-n=10k-r-ft-frz-enc/last.bin",
+        data_path="Data/Test_data_other/EN_ISCO68_IPUMS_UK_test.csv",
+        system = "ISCO68A"
+    )
+    # ISCO68 with 10k (non-unique) training strings (full finetuning)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/isco68_performance_n_10000_full_finetuning.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-isco-n=10k-r-ft/last.bin",
+        data_path="Data/Test_data_other/EN_ISCO68_IPUMS_UK_test.csv",
         system = "ISCO68A"
     )
 
     # OCC1950
     test_performance(
-        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/occ1950_performance.csv",
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/occ1950_performance.csv",
         n_obs=n_obs,
-        mod_path=r"Y:\pc-to-Y\hisco\ft-models/mixer-occ1950-ft/last.bin",
-        data_path=r"Z:\faellesmappe\tsdj\hisco\data/Test_data_other/EN_OCC1950_IPUMS_US_test.csv",
+        mod_path="Data/models/mixer-occ1950-ft/last.bin",
+        data_path="Data/Test_data_other/EN_OCC1950_IPUMS_US_test.csv",
+        system = "OCC1950"
+    )
+
+    # OCC1950 with 10k unique training strings (frozen encoder)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/occ1950_performance_n_unq10000.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-occ1950-n=10k-ft-frz-enc/last.bin",
+        data_path="Data/Test_data_other/EN_OCC1950_IPUMS_US_test.csv",
+        system = "OCC1950"
+    )
+
+    # OCC1950 with 10k unique training strings (full finetuning)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/occ1950_performance_n_unq10000_full_finetuning.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-occ1950-n=10k-ft/last.bin",
+        data_path="Data/Test_data_other/EN_OCC1950_IPUMS_US_test.csv",
+        system = "OCC1950"
+    )
+
+    # OCC1950 with 10k (non-unique) training strings (frozen encoder)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/occ1950_performance_n_10000.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-occ1950-n=10k-r-ft-frz-enc/last.bin",
+        data_path="Data/Test_data_other/EN_OCC1950_IPUMS_US_test.csv",
+        system = "OCC1950"
+    )
+
+    # OCC1950 with 10k (non-unique) training strings (full finetuning)
+    test_performance(
+        file="Project_dissemination/Paper_replication_package/Data/Intermediate_data/other_systems/occ1950_performance_n_10000_full_finetuning.csv",
+        n_obs=n_obs,
+        mod_path="Data/models/mixer-occ1950-n=10k-r-ft/last.bin",
+        data_path="Data/Test_data_other/EN_OCC1950_IPUMS_US_test.csv",
         system = "OCC1950"
     )
 
