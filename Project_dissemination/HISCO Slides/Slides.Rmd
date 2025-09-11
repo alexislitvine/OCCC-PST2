@@ -191,36 +191,7 @@ class: middle
 https://youtu.be/BF_oNe-sABQ?si=Ef1YrkK43Ln_IHJS
 ]
 
----
 
-
-.pull-left[
-## Open questions
-- Historical developments in living standards
-- The role of technology and change of technology
-- The dynamics of income inequality 
-- Social mobility 
-- Returns to education
-
-
-## Two broad barriers to research
-- We need data
-  + A: We need to to take data from archives
-  + B: ...And turn it into something useful for analysis
-]
-
-
-.pull-right[
-**Type A:**  
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.height="300px", out.width="300px"}
-knitr::include_graphics("Figures/TypeA.png")
-```
-
-.red[**Type B:**]
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.height="300px"}
-knitr::include_graphics("Figures/TypeB.webp")
-```
-]
 
 ---
 ## Thanks to data contributors
@@ -259,7 +230,8 @@ knitr::include_graphics("Figures/TypeB.webp")
 - A lot of researchers have solved the task of turning strings into HISCO codes
 - We simply make their work generalizable
 
-- We've received data from seven additional sources since the initial release
+- I couldn't fit everyone, and people still send us data
+- Please send us your data at christian-vs@sam.sdu.dk 
 ]
 
 
@@ -294,7 +266,7 @@ Canine: Pre-training an Efficient Tokenization-Free Encoder for Language Represe
 ]
 
 ???
-- Fairly simple neural network
+- *Small* language model
 - Transformer architecture: CANINE
 - Character level: fairly robust to typos, spelling mistakes, and changing spelling conventions
 - Finetuned to predict HISCO codes
@@ -310,6 +282,11 @@ Canine: Pre-training an Efficient Tokenization-Free Encoder for Language Represe
 
 .red[christian-vs@sam.sdu.dk]
 ]
+
+---
+# Architecture
+![Arch2](Figures/Architecture2.png)
+
 
 ---
 # How to train a generalizable solution?
@@ -456,28 +433,106 @@ p2d_wlang %>% layout(autosize = F, width = 500, height = 400)
 
 ---
 # Test data performance (2/2) 
-.panelset[
-  .panel[
-  .panel-name[Version 0.1]
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.height="450px", out.width="675px"}
-knitr::include_graphics("Figures/Performance_by_language.png")
-```
-]
-.panel[
-  .panel-name[Version 0.2 - 'flat']
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.height="450px", out.width="675px"}
-knitr::include_graphics("Figures/Performance_by_lang_flat.png")
-```
-].panel[
-  .panel-name[Version 0.2 - 'greedy']
 ```{r echo=FALSE, message=FALSE, warning=FALSE, out.height="450px", out.width="675px"}
 knitr::include_graphics("Figures/Performance_by_lang_greedy.png")
 ```
+
+
+---
+# Out of distribution
+
+ 
+| Dataset                       |   n |   substantial |   strict |
+|-------------------------------|----:|--------------:|---------:|
+| Copenhagen Burial Records     | 367 |         0.962 |    0.890 |
+| Norwegian Student Biographies | 500 |         0.950 |    0.874 |
+
+
+.footnote[
+.small123[
+$^*$ *Thanks to Bram Hilkens*  
+See more details in the paper
 ]
 ]
 
 
 
+
+---
+class: middle
+
+# Demonstration
+
+.pull-left-narrow[
+- Everything is open source.
+- You can use our method with basic Python-skills
+- Most functionalities demonstrated here: [colab](https://github.com/christianvedels/OccCANINE/blob/main/OccCANINE_colab.ipynb)
+]
+
+
+.pull-right-wide[
+<iframe width="560" height="315" src="https://www.youtube.com/embed/d8dR5-clJeQ?si=R6mPJ0Yn2KGXKy-B" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+]
+
+---
+# Other systems: What about ...
+.pull-left-narrow[
+... OCC1950 (US censuses)  
+... OCCICEM (UK censuses)  
+... ISCO-68  
+... and so on?
+
+**Our solution also applies to those cases with finetuning**
+]
+
+--
+
+.pull-right-wide[
+#### Panel A: Full training data
+*~20 days of finetuning - millions of observations*
+
+| Target system | Accuracy | F1-score |
+|---------------|----------|----------|
+| ISCO-68       |    0.938 |    0.958 |
+| OCCICEM       |    0.974 |    0.977 |
+| OCC1950       |    0.866 |    0.875 |
+
+#### Panel B: Small scale training
+*~20 .red123[hours] of finetuning - 10.000 observations*
+
+| Target system | Accuracy | F1-score |
+|---------------|----------|----------|
+| ISCO-68       |    0.822 |    0.844 |
+| OCCICEM       |    0.857 |    0.860 |
+| OCC1950       |    0.805 |    0.813 |
+]
+
+
+---
+class: middle
+# Conclusion
+.pull-left[
+- Something that took weeks, months and years, now takes an afternoon
+- Enables new research 
+- Enables more time on caring about the quality of sources and their nature
+- Updated version released soon
+]
+
+.pull-right[
+**Feel free to reach out**  
+Twitter: @ChristianVedel  
+BlueSky: @christianvedel.bsky.social  
+christian-vs@sam.sdu.dk  
+
+
+See guide on YouTube: https://youtu.be/BF_oNe-sABQ?si=Ef1YrkK43Ln_IHJS
+]
+
+
+---
+class: middle, center
+
+# Appendix
 
 ---
 # The nature of the mistakes
@@ -512,60 +567,7 @@ knitr::include_graphics("Figures/CANINE_preds_w_lang/RowID_DK_census1787182508.p
 ]
 ]
 
----
-# Out of distribution
 
-| Dataset                   | N checked | Accuracy | Exact agreement | Subst. agreement |
-|---------------------------|-----------|----------|-----------------|------------------|
-| Copenhagen Burial Records | 200       | 0.950    | -               | -                |
-| Training Ship Data        | 200       | 0.985    | 0.820           | 0.965            |
-| Swedish Strikes           | 200       | 0.945    | 0.805           | 0.935            |
-| Dutch Familiegeld         | 200       | 0.925    | 0.670           | 0.925            |
-
-
-.footnote[
-.small123[
-$^*$ *Thanks to Bram Hilkens*  
-See more details in the paper
-]
-]
-
-
----
-# Differential error rates
-.pull-left-narrow[
-- Performs best for the most common HISCO codes (99% --> 524 HISCO codes)
-- (As does squishy wet neural networks)
-]
-
-.pull-right-wide[
-![HISCO_count](Figures/Performance_by_hisco.png)
-]
-
----
-# Bias
-
-.pull-left-narrow[
-- Potential problem: If error rates are correlated with Socio-Economic Status
-- Turns out its not
-- Not in a regression setting either
-]
-
-.pull-right-wide[
-![SES](Figures/Performance_by_ses.png)
-]
-
-
----
-# Architecture
-![Arch](Figures/Architecture.png)
-
-**Summary:** Description goes in, probabilities comes out
-
-
----
-# Architecture - updated
-![Arch2](Figures/Architecture2.png)
 
 
 ---
@@ -771,33 +773,34 @@ $^1$: We always reccomend checking 200 observations manually. This is still much
 - Two user end options: *'fast'* or *'good'*
 ]
 
----
-class: middle
-# Demonstration
-- Everything is open source.
-- You can use our method with basic Python-skills
-- Most functionalities demonstrated here: [colab](https://github.com/christianvedels/OccCANINE/blob/main/OccCANINE_colab.ipynb)
 
 ---
-class: middle
-# Conclusion
-.pull-left[
-- Something that took weeks, months and years, now takes an afternoon
-- Enables new research 
-- Enables more time on caring about the quality of sources and their nature
-
-- Updated version released soon
+# Differential error rates
+.pull-left-narrow[
+- Performs best for the most common HISCO codes (99% --> 524 HISCO codes)
+- (As does squishy wet neural networks)
 ]
 
-.pull-right[
-**Feel free to reach out**  
-Twitter: @ChristianVedel  
-BlueSky: @christianvedel.bsky.social  
-christian-vs@sam.sdu.dk  
-
-
-See guide on YouTube: https://youtu.be/BF_oNe-sABQ?si=Ef1YrkK43Ln_IHJS
+.pull-right-wide[
+![HISCO_count](Figures/Performance_by_hisco.png)
 ]
 
+---
+# Bias
 
+.pull-left-narrow[
+- Potential problem: If error rates are correlated with Socio-Economic Status
+- Turns out its not
+- Not in a regression setting either
+]
+
+.pull-right-wide[
+![SES](Figures/Performance_by_ses.png)
+]
+
+---
+# Architecture
+![Arch](Figures/Architecture.png)
+
+**Summary:** Description goes in, probabilities comes out
 
