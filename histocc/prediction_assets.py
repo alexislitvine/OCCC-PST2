@@ -20,6 +20,9 @@ from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, get_linear_schedule_with_warmup
 from unidecode import unidecode
 
+import numpy
+import torch.serialization
+
 import numpy as np
 import pandas as pd
 
@@ -217,8 +220,21 @@ class OccCANINE:
                 raise ValueError("Hugging Face loading is only supported for the 'HISCO' system. Please set 'hf' to False and provide a local model name.")
 
             # TODO: Move into key loading method
-            loaded_state = torch.load(name, weights_only=True) # Load state
-            key_loaded = loaded_state['key']
+            # loaded_state = torch.load(name, weights_only=True)
+            try: # TODO: Delete this try except again
+                loaded_state = torch.load(name, weights_only=True)
+            # Load with weight_only=False if error
+            except Exception as e:
+                loaded_state = torch.load(name, weights_only=False)
+                            # tmp load keys from csv TODO: Remove this again
+            if 'key' not in loaded_state.keys():
+                 # Load from dir of 'name' + 'key.csv'
+                key_path = os.path.join(os.path.dirname(name), 'key.csv')
+                key_loaded = pd.read_csv(key_path)
+                # Make dict (code to system_code)
+                key_loaded = key_loaded.set_index('system_code')['code'].to_dict()
+            else:
+                key_loaded = loaded_state['key']
             self.key = {int(v): str(k) for k, v in key_loaded.items()} # Invert key and cast to int / str
             self.key_desc = {k: "Not provided" for k in self.key.keys()}
 
@@ -413,7 +429,10 @@ class OccCANINE:
 
         # Load state
         model_path = f'{self.name}'
-        loaded_state = torch.load(model_path, weights_only = True, map_location=self.device)
+        try: # TODO: Delete this try except again
+            loaded_state = torch.load(model_path, weights_only = True, map_location=self.device)
+        except Exception as e:
+            loaded_state = torch.load(model_path, weights_only = False, map_location=self.device)
 
         # Determine model type
         model_type = self._derive_model_type(loaded_state)
