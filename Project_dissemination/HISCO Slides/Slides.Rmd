@@ -165,75 +165,6 @@ knitr::include_graphics("Figures/HISCO structure.png")
 ```
 
 
----
-class: middle
-# OccCANINE
-.pull-left[
-- New tool to make research using historical occupations easier
-
-- 10000 observations in 27 seconds (rather than 27 hours)
-
-- Language model, OccCANINE:
-  + **Input:** "En" + "He is a farmer"
-  + **Output:** HISCO code 61110 (probability=0.989589)
-  
-- Everything is free, open source, wrapped up in a simple python library and available at [github.com/christianvedels/OccCANINE](https://github.com/christianvedels/OccCANINE)
-
-- .red123[Today:] New and old results
-
-
-]
-
-.pull-right[
-<iframe width="560" height="315" src="https://www.youtube.com/embed/BF_oNe-sABQ?si=n3PxM8PkrB5esyPI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
-*Youtube video on how to use it*
-https://youtu.be/BF_oNe-sABQ?si=Ef1YrkK43Ln_IHJS
-]
-
-
-
----
-## Thanks to data contributors
-.pull-left-wide[
-.tiny123[
-| file                        | Observations | Percent | Language | Source                                                    |
-|-----------------------------|--------------|---------|----------|-----------------------------------------------------------|
-| DK_census_[x].csv           | 5,391,656    | 29.794% | da       | Clausen (2015); The Danish National Archives              |
-| EN_marr_cert_[x].csv        | 4,046,203    | 22.359% | en       | Clark, Cummins, Curtis (2022)                             |
-| EN_uk_ipums_[x].csv         | 3,026,859    | 16.726% | en       | MPC (2020); Office of National Statistics                 |
-| SE_swedpop_[x].csv          | 1,793,557    | 9.911%  | se       | SwedPop (2022)                                            |
-| JIW_database_[x].csv        | 966,793      | 5.343%  | nl       | De Moor & van Weeren (2021)                               |
-| EN_ca_ipums_[x].csv         | 818,657      | 4.524%  | unk      | MPC (2020); Statistics Canada                             |
-| CA_bcn_[x].csv              | 644,484      | 3.561%  | ca       | Pujades-Mora & Valls (2017)                               |
-| HISCO_website_[x].csv       | 392,248      | 2.168%  | mult     | HISCO website                                             |
-| HSN_database_[x].csv        | 184,937      | 1.022%  | nl       | Mandemakers et al (2020)                                  |
-| NO_ipums_[x].csv            | 147,255      | 0.814%  | no       | MPC (2020)                                                |
-| FR_desc_[x].csv             | 142,778      | 0.789%  | fr       | historyofwork.iisg.nl                                     |
-| EN_us_ipums_[x].csv         | 139,595      | 0.771%  | en       | MPC (2020); Bureau of the Census                          |
-| EN_ship_data_[x].csv        | 103,023      | 0.569%  | en       | Schneider & Gao (2019)                                    |
-| EN_parish_[x].csv           | 73,806       | 0.408%  | en       | de Pleijt, Nuvolari, Weisdorf (2020)                      |
-| DK_cedar_[x].csv            | 46,563       | 0.257%  | da       | Ford (2023)                                               |
-| SE_cedar_[x].csv            | 45,581       | 0.252%  | se       | Ford (2023)                                               |
-| DK_orsted_[x].csv           | 36,608       | 0.202%  | da       | Ford (2023)                                               |
-| EN_oclack_[x].csv           | 24,530       | 0.136%  | en       | O-clack                                                   |
-| EN_loc_[x].csv              | 23,179       | 0.128%  | en       | Mooney (2016)                                             |
-| IS_ipums_[x].csv            | 20,459       | 0.113%  | is       | MPC (2020)                                                |
-| SE_chalmers_[x].csv         | 14,426       | 0.08%   | se       | Ford (2023)                                               |
-| DE_ipums_[x].csv            | 8,482        | 0.047%  | de       | MPC (2020); Statistics Netherlands                        |
-| IT_fm_[x].csv               | 4,525        | 0.025%  | it       | Fornasin & Marzona (2016)                                 |
-
-]
-]
-
-.pull-right-narrow[
-- A lot of researchers have solved the task of turning strings into HISCO codes
-- We simply make their work generalizable
-
-- I couldn't fit everyone, and people still send us data
-- Please send us your data at christian-vs@sam.sdu.dk 
-]
-
 
 ---
 class: middle
@@ -286,6 +217,47 @@ Canine: Pre-training an Efficient Tokenization-Free Encoder for Language Represe
 ---
 # Architecture
 ![Arch2](Figures/Architecture2.png)
+
+---
+## Thanks to data contributors
+.pull-left-wide[
+.tiny123[
+| file                        | Observations | Percent | Language | Source                                                    |
+|-----------------------------|--------------|---------|----------|-----------------------------------------------------------|
+| DK_census_[x].csv           | 5,391,656    | 29.794% | da       | Clausen (2015); The Danish National Archives              |
+| EN_marr_cert_[x].csv        | 4,046,203    | 22.359% | en       | Clark, Cummins, Curtis (2022)                             |
+| EN_uk_ipums_[x].csv         | 3,026,859    | 16.726% | en       | MPC (2020); Office of National Statistics                 |
+| SE_swedpop_[x].csv          | 1,793,557    | 9.911%  | se       | SwedPop (2022)                                            |
+| JIW_database_[x].csv        | 966,793      | 5.343%  | nl       | De Moor & van Weeren (2021)                               |
+| EN_ca_ipums_[x].csv         | 818,657      | 4.524%  | unk      | MPC (2020); Statistics Canada                             |
+| CA_bcn_[x].csv              | 644,484      | 3.561%  | ca       | Pujades-Mora & Valls (2017)                               |
+| HISCO_website_[x].csv       | 392,248      | 2.168%  | mult     | HISCO website                                             |
+| HSN_database_[x].csv        | 184,937      | 1.022%  | nl       | Mandemakers et al (2020)                                  |
+| NO_ipums_[x].csv            | 147,255      | 0.814%  | no       | MPC (2020)                                                |
+| FR_desc_[x].csv             | 142,778      | 0.789%  | fr       | historyofwork.iisg.nl                                     |
+| EN_us_ipums_[x].csv         | 139,595      | 0.771%  | en       | MPC (2020); Bureau of the Census                          |
+| EN_ship_data_[x].csv        | 103,023      | 0.569%  | en       | Schneider & Gao (2019)                                    |
+| EN_parish_[x].csv           | 73,806       | 0.408%  | en       | de Pleijt, Nuvolari, Weisdorf (2020)                      |
+| DK_cedar_[x].csv            | 46,563       | 0.257%  | da       | Ford (2023)                                               |
+| SE_cedar_[x].csv            | 45,581       | 0.252%  | se       | Ford (2023)                                               |
+| DK_orsted_[x].csv           | 36,608       | 0.202%  | da       | Ford (2023)                                               |
+| EN_oclack_[x].csv           | 24,530       | 0.136%  | en       | O-clack                                                   |
+| EN_loc_[x].csv              | 23,179       | 0.128%  | en       | Mooney (2016)                                             |
+| IS_ipums_[x].csv            | 20,459       | 0.113%  | is       | MPC (2020)                                                |
+| SE_chalmers_[x].csv         | 14,426       | 0.08%   | se       | Ford (2023)                                               |
+| DE_ipums_[x].csv            | 8,482        | 0.047%  | de       | MPC (2020); Statistics Netherlands                        |
+| IT_fm_[x].csv               | 4,525        | 0.025%  | it       | Fornasin & Marzona (2016)                                 |
+
+]
+]
+
+.pull-right-narrow[
+- A lot of researchers have solved the task of turning strings into HISCO codes
+- We simply make their work generalizable
+
+- I couldn't fit everyone, and people still send us data
+- Please send us your data at christian-vs@sam.sdu.dk 
+]
 
 
 ---
@@ -361,6 +333,53 @@ rbind(
 
 
 
+
+---
+# Test data performance (1/2)
+| Decoder | Statistic | **Digits** |   |   |   |   |
+|---------|-----------|-----------|---|---|---|---|
+|         |           | 1 | 2 | 3 | 4 | 5 |
+| *good*  | accuracy  | 0.977 | 0.968 | 0.964 | 0.961 | 0.960 |
+|         | precision | 0.978 | 0.968 | 0.964 | 0.961 | 0.960 |
+|         | recall    | 0.982 | 0.974 | 0.971 | 0.967 | 0.967 |
+|         | f1        | 0.979 | 0.970 | 0.966 | 0.963 | 0.963 |
+| *fast*  | accuracy  | 0.979 | 0.971 | 0.967 | 0.964 | 0.964 |
+|         | precision | 0.980 | 0.972 | 0.968 | 0.965 | 0.965 |
+|         | recall    | 0.983 | 0.979 | 0.976 | 0.973 | 0.973 |
+|         | f1        | 0.981 | 0.974 | 0.971 | 0.968 | 0.967 |
+
+
+.footnote[
+.small123[
+*Based on 1M test observations*
+]
+]
+
+---
+# Test data performance (2/2) 
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.height="450px", out.width="675px"}
+knitr::include_graphics("Figures/Performance_by_lang_greedy.png")
+```
+
+
+---
+# Out of distribution
+
+ 
+| Dataset                       |   n |   substantial |   strict |
+|-------------------------------|----:|--------------:|---------:|
+| Copenhagen Burial Records     | 367 |         0.962 |    0.890 |
+| Norwegian Student Biographies | 500 |         0.950 |    0.874 |
+
+
+.footnote[
+.small123[
+$^*$ *Thanks to Bram Hilkens*  
+See more details in the paper
+]
+]
+
+
 ---
 ```{r include=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -410,53 +429,6 @@ p2d_wlang %>% layout(autosize = F, width = 500, height = 400)
 ]
 ]
 ]
----
-# Test data performance (1/2)
-| Decoder | Statistic | **Digits** |   |   |   |   |
-|---------|-----------|-----------|---|---|---|---|
-|         |           | 1 | 2 | 3 | 4 | 5 |
-| *good*  | accuracy  | 0.977 | 0.968 | 0.964 | 0.961 | 0.960 |
-|         | precision | 0.978 | 0.968 | 0.964 | 0.961 | 0.960 |
-|         | recall    | 0.982 | 0.974 | 0.971 | 0.967 | 0.967 |
-|         | f1        | 0.979 | 0.970 | 0.966 | 0.963 | 0.963 |
-| *fast*  | accuracy  | 0.979 | 0.971 | 0.967 | 0.964 | 0.964 |
-|         | precision | 0.980 | 0.972 | 0.968 | 0.965 | 0.965 |
-|         | recall    | 0.983 | 0.979 | 0.976 | 0.973 | 0.973 |
-|         | f1        | 0.981 | 0.974 | 0.971 | 0.968 | 0.967 |
-
-
-.footnote[
-.small123[
-*Based on 100k million test observations*
-]
-]
-
----
-# Test data performance (2/2) 
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.height="450px", out.width="675px"}
-knitr::include_graphics("Figures/Performance_by_lang_greedy.png")
-```
-
-
----
-# Out of distribution
-
- 
-| Dataset                       |   n |   substantial |   strict |
-|-------------------------------|----:|--------------:|---------:|
-| Copenhagen Burial Records     | 367 |         0.962 |    0.890 |
-| Norwegian Student Biographies | 500 |         0.950 |    0.874 |
-
-
-.footnote[
-.small123[
-$^*$ *Thanks to Bram Hilkens*  
-See more details in the paper
-]
-]
-
-
-
 
 ---
 class: middle
@@ -691,56 +663,6 @@ class: middle
 ![DK_income](Figures/Major_group.png)
 ]
 
----
-# Application 2: Danish Census data (1787-1901)
-
-.pull-left[
-- We can proxy for income by looking at the average income of each occupation.
-- For now based on 1915 average incomes
-- Extensions possble
-- Seperate paper: Will be presented in WEHC in Lund and IC2S2 in Norrköping this summer
-
-
-**How do we turn 1915 incomes into HISCO-code-level incomes?** $\rightarrow$ ***Also use OccCANINE***
-
-$$
-\mathbb{E}(w_i|h_j)=\sum_i^N w_i \frac{\overset{OccCANINE}{\overbrace{Pr(h_j|w_i)}}\overset{Prior}{\overbrace{Pr(w_i)}}}{\underset{Normalization / Evidence}{\underbrace{Pr(h_j)}}}
-$$
-]
-
-.pull-right[
-![1915](Figures/TableX_example.png)
-]
-
----
-# Danish Economic History in three bullets
-.pull-left[
-- When was the economic take-off in Denmark?
-- Latter half of 19th century (Henriksen, 2006)
-- Wages: From among the poorest to being among the richest in the period 1850-1900 (Khaustova, Sharp, 2015)
-- **But how much of this is driven by occupational shifts?**
-  + *Answer*: Some of it was
-]
-
-.pull-right-narrow[
-![DK_hist](Figures/DK_EH.webp)
-*I've heard the creameries also played a role (Lampe & Sharp, 2019)*
-]
-
-
----
-# Application 2: Danish Census data (1787-1901)
-
-.pull-left-wide[
-![DK_income](Figures/DK_occ_income.png)
-]
-
-.pull-right-narrow[
-- Stable (occupational) incomes until mid 1800s
-- Sharp shift upwards
-- People started taking jobs that (eventually) would pay more 
-
-]
 
 ---
 # What we are working on
@@ -803,4 +725,30 @@ $^1$: We always reccomend checking 200 observations manually. This is still much
 ![Arch](Figures/Architecture.png)
 
 **Summary:** Description goes in, probabilities comes out
+
+
+---
+class: middle
+# OccCANINE
+.pull-left[
+- New tool to make research using historical occupations easier
+
+- 10000 observations in minutes (rather than 27 hours)
+
+- Small language model, OccCANINE:
+  + **Input:** "En" + "He is a farmer"
+  + **Output:** HISCO code 61110 (probability=0.989589)
+  
+- Everything is free, open source, wrapped up in a simple python library and available at [github.com/christianvedels/OccCANINE](https://github.com/christianvedels/OccCANINE)
+
+
+]
+
+.pull-right[
+<iframe width="560" height="315" src="https://www.youtube.com/embed/BF_oNe-sABQ?si=n3PxM8PkrB5esyPI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+*Youtube video on how to use it*
+https://youtu.be/BF_oNe-sABQ?si=Ef1YrkK43Ln_IHJS
+]
+
 

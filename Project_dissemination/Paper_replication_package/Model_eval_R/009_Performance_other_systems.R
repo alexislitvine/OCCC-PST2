@@ -4,6 +4,8 @@
 #
 # Purpose:  Descriptive statistics used in the paper
 
+# YES: THIS ABSOLUTELY NEEDS TO BE CLEANED UP A LOT. SORRY!
+
 # ==== Libraries ====
 library(tidyverse)
 library(foreach)
@@ -13,14 +15,14 @@ source("Project_dissemination/Paper_replication_package/Model_eval_R/000_Functio
 
 # ==== Load data ====
 tl = TRUE  # Toyload for quick testing
-files_train = c("EN_ISCO68_IPUMS_UK_train.csv", "EN_ISCO68_IPUMS_UK_n_unq10000_train.csv", "EN_OCCICEM_IPUMS_UK_train.csv", "EN_OCCICEM_IPUMS_UK_n_unq10000_train.csv", "EN_OCC1950_IPUMS_US_train.csv", "EN_OCC1950_IPUMS_US_n_unq10000_train.csv", "EN_OCC1950_IPUMS_US_n_10000_train.csv")
-files_val1 = c("EN_ISCO68_IPUMS_UK_val1.csv", "EN_ISCO68_IPUMS_UK_n_unq10000_val1.csv", "EN_OCCICEM_IPUMS_UK_val1.csv", "EN_OCCICEM_IPUMS_UK_n_unq10000_val1.csv", "EN_OCC1950_IPUMS_US_val1.csv", "EN_OCC1950_IPUMS_US_n_unq10000_val1.csv")
-files_val2 = c("EN_ISCO68_IPUMS_UK_val2.csv", "EN_ISCO68_IPUMS_UK_n_unq10000_val2.csv", "EN_OCCICEM_IPUMS_UK_val2.csv", "EN_OCCICEM_IPUMS_UK_n_unq10000_val2.csv", "EN_OCC1950_IPUMS_US_val2.csv", "EN_OCC1950_IPUMS_US_n_unq10000_val2.csv")
+files_train = c("EN_ISCO68_IPUMS_UK_train.csv", "EN_ISCO68_IPUMS_UK_n_10000_train.csv", "EN_OCCICEM_IPUMS_UK_train.csv", "EN_OCCICEM_IPUMS_UK_n_10000_train.csv", "EN_OCC1950_IPUMS_US_train.csv", "EN_OCC1950_IPUMS_US_n_10000_train.csv")
+# files_val1 = c("EN_ISCO68_IPUMS_UK_val1.csv", "EN_ISCO68_IPUMS_UK_n_unq10000_val1.csv", "EN_OCCICEM_IPUMS_UK_val1.csv", "EN_OCCICEM_IPUMS_UK_n_unq10000_val1.csv", "EN_OCC1950_IPUMS_US_val1.csv", "EN_OCC1950_IPUMS_US_n_unq10000_val1.csv")
+# files_val2 = c("EN_ISCO68_IPUMS_UK_val2.csv", "EN_ISCO68_IPUMS_UK_n_unq10000_val2.csv", "EN_OCCICEM_IPUMS_UK_val2.csv", "EN_OCCICEM_IPUMS_UK_n_unq10000_val2.csv", "EN_OCC1950_IPUMS_US_val2.csv", "EN_OCC1950_IPUMS_US_n_unq10000_val2.csv")
 files_test = c("EN_ISCO68_IPUMS_UK_test.csv", "EN_OCCICEM_IPUMS_UK_test.csv", "EN_OCC1950_IPUMS_US_test.csv")
 
 train = read0("Data/Training_data_other", verbose = TRUE, files = files_train, toyload = tl)
-val1 = read0("Data/Validation_data1_other", verbose = TRUE, files = files_val1, toyload = tl)
-val2 = read0("Data/Validation_data2_other", verbose = TRUE, files = files_val2, toyload = tl)
+# val1 = read0("Data/Validation_data1_other", verbose = TRUE, files = files_val1, toyload = tl)
+# val2 = read0("Data/Validation_data2_other", verbose = TRUE, files = files_val2, toyload = tl)
 test = read0("Data/Test_data_other", verbose = TRUE, files = files_test, toyload = tl)
 
 # Files with test performance
@@ -142,9 +144,11 @@ get_row = function(sys, reg) {
     Precision = fmt3(r$precision),
     Recall = fmt3(r$recall),
     `F1-score` = fmt3(r$f1),
-    `Train time` = dplyr::case_when(
+    `Train time` = case_when(
       reg == "full" ~ "$\\sim$20 days",
       reg == "10k_full" ~ "$\\sim$48 hours",
+      reg == "10k_total (full finetuning)" ~ "$\\sim$48 hours",
+      reg == "10k_frozen" ~ "$\\sim$20 hours",
       TRUE ~ "$\\sim$20 hours"
     ),
     check.names = FALSE
@@ -157,28 +161,22 @@ panelA = dplyr::bind_rows(
   get_row("OCC1950", "full")
 )
 panelB = dplyr::bind_rows(
-  get_row("ISCO-68", "10k_full"),
-  get_row("OCCICEM", "10k_full"),
-  get_row("OCC1950", "10k_full")
-)
-panelC = dplyr::bind_rows(
-  get_row("ISCO-68", "10k_frozen"),
-  get_row("OCCICEM", "10k_frozen"),
-  get_row("OCC1950", "10k_frozen")
-)
-panelD = dplyr::bind_rows(
-  get_row("ISCO-68", "10k_total"),
-  get_row("OCCICEM", "10k_total"),
-  get_row("OCC1950", "10k_total")
-)
-panelE = dplyr::bind_rows(
   get_row("ISCO-68", "10k_total (full finetuning)"),
   get_row("OCCICEM", "10k_total (full finetuning)"),
   get_row("OCC1950", "10k_total (full finetuning)")
 )
+panelC = dplyr::bind_rows(
+  get_row("ISCO-68", "10k_total"),
+  get_row("OCCICEM", "10k_total"),
+  get_row("OCC1950", "10k_total")
+)
 
 
-tab = dplyr::bind_rows(panelA, panelB, panelC, panelD, panelE)
+tab = dplyr::bind_rows(
+  panelA, 
+  panelB, 
+  panelC
+)
 
 sink("Project_dissemination/Paper_replication_package/Tables/Performance_other_systems.txt")
 tab %>%
@@ -190,10 +188,10 @@ tab %>%
     align = c("l","l","r","r","r","r","r","l")
   ) %>%
   kableExtra::pack_rows("\\textit{Panel A: Full training data (good decoder)}", 1, 3, italic = TRUE) %>%
-  kableExtra::pack_rows("\\textit{Panel B: 10,000 unique strings (good decoder)}", 4, 6, italic = TRUE) %>%
-  kableExtra::pack_rows("\\textit{Panel C: 10,000 unique strings, frozen encoder (good decoder)}", 7, 9, italic = TRUE) %>%
-  kableExtra::pack_rows("\\textit{Panel D: 10,000 total strings, frozen encoder (good decoder)}", 10, 12, italic = TRUE) %>%
-  kableExtra::pack_rows("\\textit{Panel E: 10,000 total strings (good decoder)}", 13, 15, italic = TRUE) %>%
+  kableExtra::pack_rows("\\textit{Panel B: 10,000 strings, (good decoder)}", 4, 6, italic = TRUE) %>%
+  kableExtra::pack_rows("\\textit{Panel C: 10,000 strings, frozen encoder (good decoder)}", 7, 9, italic = TRUE) %>%
+  # kableExtra::pack_rows("\\textit{Panel B: 10,000 total strings, frozen encoder (good decoder)}", 10, 12, italic = TRUE) %>%
+  # kableExtra::pack_rows("\\textit{Panel C: 10,000 total strings (good decoder)}", 13, 15, italic = TRUE) %>%
   print()
 sink()
 
