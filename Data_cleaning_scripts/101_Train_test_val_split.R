@@ -40,15 +40,27 @@ pipeline = function(x, name, lang){
   
   cat("\nLoading", x)
   x = loadRData(x)
+
   
-  if(name %in% c("EN_uk_ipums", "EN_us_ipums")){
-    # These are downsampled to not dominate training
-    x = x %>% 
-      select(-RowID) %>% 
-      distinct() %>% 
-      mutate(RowID = 1:n())
-  }
-  
+  if (name %in% c("EN_uk_ipums", "EN_us_ipums")) {
+    # Downsample each unique row (excluding RowID) to floor(sqrt(freq))
+    grp_cols = setdiff(names(x), "RowID")
+
+    x1 = x %>%
+      group_by_at(grp_cols) %>%
+      count() %>%
+      group_by_at(grp_cols) %>%
+      group_split() %>%
+      map_df(function(df){
+          n_new = ceiling(sqrt(df$n[1]))
+          df_new = df[rep(1, n_new), ]
+          df_new$n = n_new
+          return(df_new)
+      }) %>%
+      bind_rows() %>%
+      ungroup() %>%
+      mutate(RowID = row_number())
+
   load("Data/Manual_data/Random_sequence_long.Rdata")
   set.seed(20)
   
@@ -272,7 +284,28 @@ x = pipeline(
   lang = "In_data"
 )
 
+# ==== Create_upsampled_data ====
+set.seed(20)
+files = list.files("Data/Training_data")
+foreach(f = files, .combine = "c") %do% {
+  data = read_csv(paste0("Data/Training_data/", f))
+  cat("\nUpsampling", f)
+  langs = unique(data$lang)
+  data_upsampled = foreach(l = langs, .combine = bind_rows) %do% {
+    data_l = data %>% filter(lang == l)
+    data_l_upsampled = upsample_parametrized(data_l, alpha = 0.1, verbose = TRUE, K_codes_in_system = 1919)
+  
+    return(data_l_upsampled)
+  }
 
+  # Scramble rows
+  data_upsampled = data_upsampled %>% sample_frac(1)
+
+  # Save
+  write_csv(data_upsampled, paste0("Data/Training_data_v2/", f))
+
+  return(NULL)
+}
 
 # ==== Training data stats ====
 summary0 = Data_summary(out = c("plain", "data"))
