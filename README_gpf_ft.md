@@ -78,6 +78,15 @@ We thus run this script, stop upon data prep completion, manually construct keys
 python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/pst2/mixer-pst2 --target-cols pst2_1 pst2_2 pst2_3 pst2_4 pst2_5 --warmup-steps 5000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 26 --block-size 8 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\pst2.csv --batch-size 512 --eval-interval 10000 --save-interval 5000 --use-within-block-sep --drop-bad-labels --log-wandb --wandb-project-name pst2
 ```
 
+## Excluding synthetic "GPT" samples
+
+This is currently handheld to ensure key completeness.
+We thus run this script, stop upon data prep completion, manually construct keys, and then restarts.
+
+```
+python finetune.py --save-path Z:/faellesmappe/tsdj/hisco/pst2/mixer-pst2-no-gpt --target-cols pst2_1 pst2_2 pst2_3 pst2_4 pst2_5 --warmup-steps 5000 --seq2seq-weight 0.1 --initial-checkpoint Z:\faellesmappe\tsdj\hisco\v2\baseline\last.bin --only-encoder --num-epochs 143 --block-size 8 --input-col occ1 --language-col lang --dataset Z:\faellesmappe\tsdj\hisco\data\Training_data_other\pst2_no_gpt.csv --batch-size 512 --eval-interval 10000 --save-interval 5000 --use-within-block-sep --drop-bad-labels --log-wandb --wandb-project-name pst2
+```
+
 # ISCO
 
 ```
