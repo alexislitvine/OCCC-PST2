@@ -733,3 +733,50 @@ check_all_in_dir = function(dir, verbose = FALSE){
   res = all(res)
   return(res)
 }
+
+
+# ==== upsample_parametrized ====
+# Upsamples to frequency of \frac{\alpha}{K}, where \alpha is a parameter and K is the number of classes
+# alpha = 1 would mean each class is equally represented
+# alpha = 0.1 means each class is represented at 10% of the average class (if all classes were equally represented)
+# alpha = 0 means no upsampling
+
+# x:     Data to upsample
+# alpha: Parameter
+upsample_parametrized = function(x, alpha = 0.1, verbose = FALSE, K_codes_in_system = 1919){
+  # Error if alpha is too high
+  if(alpha >= 1){
+    stop("Alpha must be < 1")
+  }
+
+  K = K_codes_in_system
+  target_freq = alpha/K
+  target_n = ceiling(target_freq * NROW(x))
+
+  if(verbose) cat("\n\nTarget number of samples:", target_n, "\n\n")
+  
+  # Upsample each class if needed
+  x_upsampled = x %>% 
+    group_by(hisco_1) %>% 
+    group_split() %>% 
+    map_df(function(df){
+      n = NROW(df)
+      if(n < target_n){
+        if(verbose) cat("Upsampling class", df$hisco_1[1], "from", n, "to", target_n, "       \r")
+        df = sample_n(df, target_n, replace = TRUE)
+      }
+      return(df)
+    }) %>% 
+    bind_rows() %>% 
+    ungroup()
+
+  cat(
+    "\nFinal number of samples:", 
+    NROW(x), "-->", NROW(x_upsampled), 
+    "-- Added:", NROW(x_upsampled) - NROW(x), 
+    paste0("(", round(100*(NROW(x_upsampled) - NROW(x))/NROW(x), 2), "%)"),
+    "\n\n"
+  )
+
+  return(x_upsampled)
+}
