@@ -21,50 +21,18 @@ all_data = all_data %>% select(occraw, hisco, n)
 # ==== Expand data ====
 # Data comes in 'compressed' format with n observations of each occraw/hisco
 # Expand to long format. Repetions is training signal.
-foreach(i = 1:NROW(all_data)) %do% {
-  fname_i = paste0("Data/Tmp_data/", i, ".Rdata")
-
-  if(paste0(i,".Rdata") %in% list.files("Data/Tmp_data")){
-    cat("Skipped", i, "                \r")
-    return(NA)
-  }
-
-  data_i = all_data[i,]
-  data_i = data.frame(
-    hisco = rep(data_i$hisco, floor(sqrt(data_i$n))), # Scale as square root to avoid occupations blowing up
-    occraw = data_i$occraw,
-    n = floor(sqrt(data_i$n)) # Scale as square root to avoid occupations blowing up
-  )
-
-  save(data_i, file = fname_i)
-
-  if(i %% 100 == 0){
-    cat(i,"of",NROW(all_data),"        \r")
-  }  
-}
-
-data0 = foreach(i = 1:NROW(all_data)) %do% {
-  fname_i =  paste0("Data/Tmp_data/", i, ".Rdata")
-  load(fname_i)
-  if(i %% 100 == 0){
-    cat(i,"of",NROW(all_data),"        \r")
-  }  
-  return(data_i)
-}
-
-foreach(i = 1:NROW(all_data)) %do% {
-  fname_i =  paste0("Data/Tmp_data/", i, ".Rdata")
-  if(i %% 100 == 0){
-    cat(i,"of",NROW(all_data),"        \r")
-  }
-  unlink(fname_i)
-}
-
-save(data0, file = "Data/Tmp_data/Tmp_EN_marr1.Rdata")
-load("Data/Tmp_data/Tmp_EN_marr1.Rdata")
-
-# Bind frames together
-data0 = do.call("rbind", data0)
+data0 = all_data %>%
+    group_by_at(c("occraw", "hisco")) %>%
+    group_split() %>%
+    map_df(function(df){
+        n_new = ceiling(sqrt(df$n[1]))
+        df_new = df[rep(1, n_new), ]
+        df_new$n = n_new
+        return(df_new)  
+    }) %>%
+    bind_rows() %>%
+    ungroup() %>%
+    mutate(RowID = row_number())
 
 # Shuffle rows
 set.seed(20)
@@ -148,6 +116,9 @@ data1 = data1 %>%
   ) %>% 
   select(-n) %>% 
   mutate(hisco_1 = as.character(hisco_1))
+
+# ==== Remove 99910 ====
+data1 = data1 %>% filter(hisco_1 != "99910") # Overused "Labourer"
 
 # ==== Get combinations ====
 set.seed(20)
