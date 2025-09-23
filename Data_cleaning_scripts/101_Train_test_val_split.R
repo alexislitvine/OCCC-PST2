@@ -1,5 +1,5 @@
 # Train test and validation split
-# Updated:    2024-07-02
+# Updated:    2025-09-23
 # Auhtors:    Christian Vedel [christian-vs@sam.sdu.dk],
 #
 # Purpose:    Splits all clean tmp files into training, test and validation
@@ -46,9 +46,12 @@ pipeline = function(x, name, lang){
     # Downsample each unique row (excluding RowID) to floor(sqrt(freq))
     grp_cols = setdiff(names(x), "RowID")
 
-    x1 = x %>%
+    x0 = x %>%
       group_by_at(grp_cols) %>%
-      count() %>%
+      count() 
+      
+    x1 = x0 %>%
+      filter(n > 10) %>% # Do this in two steps to avoid memory issues (only run sqrt-n-sampling on large n)
       group_by_at(grp_cols) %>%
       group_split() %>%
       map_df(function(df){
@@ -57,9 +60,14 @@ pipeline = function(x, name, lang){
           df_new$n = n_new
           return(df_new)
       }) %>%
-      bind_rows() %>%
+      bind_rows()
+
+    x = x0 %>%
+      filter(n <= 10) %>%
+      bind_rows(x1) %>%
       ungroup() %>%
       mutate(RowID = row_number())
+  }
 
   load("Data/Manual_data/Random_sequence_long.Rdata")
   set.seed(20)
@@ -307,6 +315,6 @@ foreach(f = files, .combine = "c") %do% {
   return(NULL)
 }
 
-# ==== Training data stats ====
-summary0 = Data_summary(out = c("plain", "data"))
-summary0[[1]] %>% write_csv2("Data/Summary_data/Data_summary.csv")
+# # ==== Training data stats ====
+# summary0 = Data_summary(out = c("plain", "data"))
+# summary0[[1]] %>% write_csv2("Data/Summary_data/Data_summary.csv")
