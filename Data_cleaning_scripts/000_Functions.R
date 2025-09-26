@@ -231,7 +231,30 @@ ensure_path_exists = function(file_path) {
 
 Save_train_val_test = function(x, Name, language = NA, dir = "standard"){
   # Throw error if incorrect language
-  valid_languages = c('da', 'en', 'nl', 'se', 'no', 'fr', 'ca', 'es', 'pt', 'gr', 'unk', 'ge', 'is', 'unk', 'it', 'In_data')
+  valid_languages = c(
+    'da', # Danish
+    'en', # English
+    'nl', # Dutch
+    'se', # Swedish
+    'no', # Norwegian
+    'fr', # French
+    'ca', # Catalan
+    'es', # Spanish
+    'pt', # Portuguese
+    'gr', # Greek
+    'unk', # Unknown
+    'ge', # German
+    'is', # Icelandic
+    'unk', # Unknown
+    'it', # Italian
+    "sq", # Albanian
+    "be", # Belarusian
+    "pl", # Polish
+    "lt", # Lithuanian
+    "sr", # Serbian
+    "tr", # Turkish
+    'In_data' # In_data
+  )
   if(!language %in% valid_languages){
     stop("Provide correct language")
   }
