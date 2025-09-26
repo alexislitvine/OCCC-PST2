@@ -1,5 +1,5 @@
 # Handheld data cleaning
-# Created:    2024-06-18
+# Created:    2025-09-24
 # Auhtors:    Christian Vedel [christian-vs@sam.sdu.dk],
 #
 # Purpose:    This script cleans Handheld data (data that we produce ourselves)
