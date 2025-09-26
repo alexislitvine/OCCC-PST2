@@ -292,6 +292,12 @@ x = pipeline(
   lang = "In_data"
 )
 
+x = pipeline(
+  "Data/Tmp_data/Mosaic_data.Rdata",
+  "Mosaic_data",
+  lang = "In_data"
+)
+
 # ==== Create_upsampled_data ====
 set.seed(20)
 files = list.files("Data/Training_data")
