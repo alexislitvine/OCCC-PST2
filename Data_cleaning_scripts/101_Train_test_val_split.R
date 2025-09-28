@@ -298,9 +298,16 @@ x = pipeline(
   lang = "In_data"
 )
 
+x = pipeline(
+  "Data/Tmp_data/Leeuwen_data.Rdata",
+  "Leeuwen_data",
+  lang = "In_data"
+)
+
 # ==== Create_upsampled_data ====
 set.seed(20)
 files = list.files("Data/Training_data")
+count = 0
 foreach(f = files, .combine = "c") %do% {
   data = read_csv(paste0("Data/Training_data/", f))
   cat("\nUpsampling", f)
@@ -314,6 +321,9 @@ foreach(f = files, .combine = "c") %do% {
 
   # Scramble rows
   data_upsampled = data_upsampled %>% sample_frac(1)
+
+  count = count + NROW(data_upsampled)
+  cat("\nTotal rows so far:", count/1000000, "million\n\n")
 
   # Save
   write_csv(data_upsampled, paste0("Data/Training_data_v2/", f))
