@@ -119,8 +119,7 @@ def skip_gpt():
 
 def main():
     write_all()
-
-
+    skip_gpt()
 
 
 if __name__ == '__main__':
