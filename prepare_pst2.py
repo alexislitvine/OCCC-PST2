@@ -99,41 +99,11 @@ def write_all():
         'system_code': keyset,
         'code': range(len(keyset)),
     })
-    key.to_csv(r'Z:\faellesmappe\tsdj\hisco\pst2\mixer-pst2-v2\key_manual.csv', index=False)
-
-
-# def skip_gpt():
-#     files = find_files(include_gpt=False)
-
-#     # Load
-#     data = pd.concat([
-#         pd.read_csv(f, dtype=DTYPES) for f in files
-#     ])
-#     assert data['pst2_1'].isna().sum() == 0
-#     assert data['occ1'].isna().sum() == 0
-
-#     # Write
-#     fn_out = r'Z:\faellesmappe\tsdj\hisco\data\Training_data_other\pst2_no_gpt.csv'
-
-#     if os.path.isfile(fn_out):
-#         raise FileExistsError(fn_out)
-
-#     data.to_csv(fn_out, index=False)
-
-#     # Time for the ugliest of all manual key insertions
-#     keyset = sorted(set(data['pst2_1']))
-#     keyset.extend(['?', pd.NA])
-
-#     key = pd.DataFrame({
-#         'system_code': keyset,
-#         'code': range(len(keyset)),
-#     })
-#     key.to_csv(r'Z:\faellesmappe\tsdj\hisco\pst2\mixer-pst2-no-gpt\key_manual.csv', index=False)
+    key.to_csv(r'Z:\faellesmappe\tsdj\hisco\pst2\mixer-pst2-v3\key_manual.csv', index=False)
 
 
 def main():
     write_all()
-    # skip_gpt()
 
 
 if __name__ == '__main__':
