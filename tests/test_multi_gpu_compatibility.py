@@ -138,7 +138,7 @@ def test_backward_compatibility():
     
     checks = [
         # Check that distributed defaults to False
-        ("parser.add_argument('--distributed', action='store_true', default=False", 
+        ("'--distributed', action='store_true', default=False", 
          "distributed defaults to False for backward compatibility"),
         # Check that device is set correctly for non-distributed
         ("device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')",
