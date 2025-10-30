@@ -12,6 +12,9 @@ Example use:
     2) python train.py --checkpoint-path path/to/checkpoint/ --batch-size 512 --dropout 0.5
     3) python train.py --checkpoint-path path/to/checkpoint/ --model-name my-cool-model
 
+Note: This script now supports multi-GPU training automatically.
+If multiple GPUs are available, the training will be distributed across all GPUs.
+
 """
 
 
