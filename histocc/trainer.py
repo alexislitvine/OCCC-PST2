@@ -255,9 +255,10 @@ def trainer_loop(
             model_name
             )
 
-        # Checkpoint
+        # Checkpoint - handle DataParallel wrapper when saving
+        model_to_save = model.module if isinstance(model, nn.DataParallel) else model
         torch.save(
-            model.state_dict(),
+            model_to_save.state_dict(),
             'Model/Checkpoint'+model_name+'.bin'
             )
 
@@ -268,7 +269,7 @@ def trainer_loop(
         if val_acc > best_accuracy:
             print("Saved improved model")
             torch.save(
-                model.state_dict(),
+                model_to_save.state_dict(),
                 'Model/'+model_name+'.bin'
                 )
             best_accuracy = val_acc
@@ -405,8 +406,10 @@ def trainer_loop_simple(
         if val_loss < best_loss:
             if save_model:
                 print("Validation loss improved. Saved improved model")
+                # Handle DataParallel wrapper when saving
+                model_to_save = model.module if isinstance(model, nn.DataParallel) else model
                 torch.save(
-                    model.state_dict(),
+                    model_to_save.state_dict(),
                     save_path+model_name+'.bin'
                     )
                 best_loss = val_loss

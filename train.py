@@ -96,6 +96,13 @@ def main():
         model, tokenizer = load_model_from_checkpoint(args.checkpoint_path, model, args.model_domain)
         data['tokenizer'] = tokenizer
 
+    # Enable multi-GPU training if multiple GPUs are available
+    if torch.cuda.device_count() > 1:
+        print(f"Using {torch.cuda.device_count()} GPUs for training")
+        model = nn.DataParallel(model)
+    elif torch.cuda.is_available():
+        print("Using single GPU for training")
+
     # Optimizer and learning scheduler
     optimizer = AdamW(model.parameters(), lr=args.learning_rate)
     total_steps = len(data['data_loader_train']) * args.epochs

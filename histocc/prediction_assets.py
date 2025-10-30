@@ -528,6 +528,28 @@ class OccCANINE:
             # Ensure the model is set to the correct device again
             self.model = self.model.to(self.device)
 
+        # Enable multi-GPU training if multiple GPUs are available
+        use_multi_gpu = torch.cuda.device_count() > 1
+        if use_multi_gpu:
+            if verbose:
+                print(f"Using {torch.cuda.device_count()} GPUs for training")
+            self.model = nn.DataParallel(self.model)
+        elif verbose and torch.cuda.is_available():
+            print("Using single GPU for training")
+
+        # Freeze layers (must be done after DataParallel wrapping)
+        if only_train_final_layer:
+            # Get the actual model (unwrap DataParallel if needed)
+            actual_model = self.model.module if isinstance(self.model, nn.DataParallel) else self.model
+            
+            # Freeze all layers initially
+            for param in actual_model.parameters():
+                param.requires_grad = False
+
+            # Unfreeze the final layers (self.out in CANINEOccupationClassifier)
+            for param in actual_model.out.parameters():
+                param.requires_grad = True
+
         optimizer = AdamW(self.model.parameters(), lr=2*10**-5)
         total_steps = len(processed_data['data_loader_train']) * epochs
         scheduler = get_linear_schedule_with_warmup(
@@ -538,16 +560,6 @@ class OccCANINE:
 
         # Set the loss function
         loss_fn = nn.BCEWithLogitsLoss().to(self.device)
-
-        # Freeze layers
-        if only_train_final_layer:
-            # Freeze all layers initially
-            for param in self.model.parameters():
-                param.requires_grad = False
-
-            # Unfreeze the final layers (self.out in CANINEOccupationClassifier)
-            for param in self.model.out.parameters():
-                param.requires_grad = True
 
 
         val_acc, val_loss = eval_model(
@@ -605,6 +617,10 @@ class OccCANINE:
             self.model = model
 
             print("Loaded best version of model")
+        else:
+            # If model not saved, unwrap DataParallel for consistency
+            if isinstance(self.model, nn.DataParallel):
+                self.model = self.model.module
 
         val_acc, val_loss = eval_model(
             self.model,
