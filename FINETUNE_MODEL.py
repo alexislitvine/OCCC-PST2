@@ -3,6 +3,10 @@
 Created on Wed Jan 24 17:13:47 2024
 
 @author: christian-vs
+
+Note: This script now supports multi-GPU training automatically.
+If multiple GPUs are available, the training will be distributed across all GPUs.
+No code changes are required - it works out of the box!
 """
 
 # %% Import necessary modules

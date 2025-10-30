@@ -12,6 +12,9 @@ Example use:
     2) python train.py --checkpoint-path path/to/checkpoint/ --batch-size 512 --dropout 0.5
     3) python train.py --checkpoint-path path/to/checkpoint/ --model-name my-cool-model
 
+Note: This script now supports multi-GPU training automatically.
+If multiple GPUs are available, the training will be distributed across all GPUs.
+
 """
 
 
@@ -95,6 +98,13 @@ def main():
     if args.checkpoint_path is not None:
         model, tokenizer = load_model_from_checkpoint(args.checkpoint_path, model, args.model_domain)
         data['tokenizer'] = tokenizer
+
+    # Enable multi-GPU training if multiple GPUs are available
+    if torch.cuda.device_count() > 1:
+        print(f"Using {torch.cuda.device_count()} GPUs for training")
+        model = nn.DataParallel(model)
+    elif torch.cuda.is_available():
+        print("Using single GPU for training")
 
     # Optimizer and learning scheduler
     optimizer = AdamW(model.parameters(), lr=args.learning_rate)
