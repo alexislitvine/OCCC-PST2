@@ -2,10 +2,13 @@ import argparse
 import os
 
 import torch
+import torch.distributed as dist
 import yaml
 
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel as DDP
 from transformers import (
     get_linear_schedule_with_warmup,
     CanineTokenizer,
@@ -52,6 +55,11 @@ def parse_args():
     # Language (must specify none or one of below, cannot specify both)
     parser.add_argument('--language', type=str, default='unk', help='Occupational description language')
     parser.add_argument('--language-col', type=str, default=None, help='Optional column name in --dataset with language')
+    
+    # Distributed training
+    parser.add_argument('--distributed', action='store_true', default=False, help='Enable distributed training across multiple GPUs')
+    parser.add_argument('--local_rank', type=int, default=-1, help='Local rank for distributed training (set automatically by torch.distributed.launch)')
+    parser.add_argument('--world-size', type=int, default=1, help='Number of processes for distributed training')
 
     # Data settings
     parser.add_argument('--block-size', type=int, default=5, help='Maximum number of characters in target (e.g., this is 5 for the HISCO system)')
@@ -240,6 +248,7 @@ def setup_datasets(
         tokenizer: CanineTokenizer,
         num_classes_flat: int,
         map_code_label: dict[str, int],
+        distributed: bool = False,
 ) -> tuple[OccDatasetMixerInMemMultipleFiles, OccDatasetMixerInMemMultipleFiles]:
     dataset_train = OccDatasetMixerInMemMultipleFiles(
         fnames_data=[os.path.join(save_path, 'data_train.csv')],
@@ -269,6 +278,29 @@ def setup_datasets(
 def main():
     # Arguments
     args = parse_args()
+    
+    # Setup distributed training
+    local_rank = args.local_rank
+    distributed = args.distributed
+    
+    # Initialize distributed training if enabled
+    if distributed:
+        if local_rank == -1:
+            # If local_rank is not set, try to get it from environment variable
+            local_rank = int(os.environ.get('LOCAL_RANK', 0))
+        
+        # Initialize the process group
+        dist.init_process_group(backend='nccl')
+        torch.cuda.set_device(local_rank)
+        device = torch.device(f'cuda:{local_rank}')
+        world_size = dist.get_world_size()
+        
+        # Only print from the main process
+        is_main_process = local_rank == 0
+    else:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        is_main_process = True
+        world_size = 1
 
     # Target-side tokenization
     formatter = construct_general_purpose_formatter(
@@ -282,21 +314,34 @@ def main():
         model_domain='Multilingual_CANINE',
     )
 
-    # Data prep
-    map_code_label = prepare_data(
-        dataset=args.dataset,
-        input_col=args.input_col,
-        formatter=formatter,
-        save_path=args.save_path,
-        share_val=args.share_val,
-        language=args.language,
-        language_col=args.language_col,
-        drop_bad_rows=args.drop_bad_labels,
-        allow_codes_shorter_than_block_size=args.allow_codes_shorter_than_block_size,
-    )
+    # Data prep (only on main process to avoid race conditions)
+    if is_main_process:
+        map_code_label = prepare_data(
+            dataset=args.dataset,
+            input_col=args.input_col,
+            formatter=formatter,
+            save_path=args.save_path,
+            share_val=args.share_val,
+            language=args.language,
+            language_col=args.language_col,
+            drop_bad_rows=args.drop_bad_labels,
+            allow_codes_shorter_than_block_size=args.allow_codes_shorter_than_block_size,
+        )
+    
+    # Wait for main process to finish data preparation
+    if distributed:
+        dist.barrier()
+        
+        # Load prepared data on non-main processes
+        if not is_main_process:
+            mapping = check_if_data_prepared(args.save_path)
+            if mapping is None:
+                raise RuntimeError("Data preparation failed on main process")
+            map_code_label = mapping
+    
     num_classes_flat = len(map_code_label)
 
-    if args.log_wandb:
+    if args.log_wandb and is_main_process:
         wandb_init(
             output_dir=args.save_path,
             project=args.wandb_project_name,
@@ -313,34 +358,63 @@ def main():
         tokenizer=tokenizer,
         num_classes_flat=num_classes_flat,
         map_code_label=map_code_label,
+        distributed=distributed,
     )
 
-    # Data loaders
-    data_loader_train = DataLoader(
-        dataset_train,
-        batch_size=args.batch_size,
-        shuffle=True,
+    # Data loaders with distributed samplers if needed
+    if distributed:
+        train_sampler = DistributedSampler(
+            dataset_train,
+            num_replicas=world_size,
+            rank=local_rank,
+            shuffle=True,
         )
-    data_loader_val = DataLoader(
-        dataset_val,
-        batch_size=args.batch_size,
-        shuffle=False,
+        val_sampler = DistributedSampler(
+            dataset_val,
+            num_replicas=world_size,
+            rank=local_rank,
+            shuffle=False,
+        )
+        data_loader_train = DataLoader(
+            dataset_train,
+            batch_size=args.batch_size,
+            sampler=train_sampler,
+        )
+        data_loader_val = DataLoader(
+            dataset_val,
+            batch_size=args.batch_size,
+            sampler=val_sampler,
+        )
+    else:
+        data_loader_train = DataLoader(
+            dataset_train,
+            batch_size=args.batch_size,
+            shuffle=True,
+        )
+        data_loader_val = DataLoader(
+            dataset_val,
+            batch_size=args.batch_size,
+            shuffle=False,
         )
 
     # Setup model, optimizer, scheduler
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
     model = Seq2SeqMixerOccCANINE(
         model_domain='Multilingual_CANINE',
         num_classes=formatter.num_classes,
         num_classes_flat=num_classes_flat,
     ).to(device)
+    
+    # Wrap model with DDP if distributed
+    if distributed:
+        model = DDP(model, device_ids=[local_rank], output_device=local_rank)
 
     if args.freeze_encoder:
-        for param in model.encoder.parameters():
+        # Handle DDP wrapper when accessing model parameters
+        model_to_freeze = model.module if distributed else model
+        for param in model_to_freeze.encoder.parameters():
             param.requires_grad = False
 
-        optimizer = AdamW([param for name, param in model.named_parameters() if not name.startswith("encoder.")], lr=args.learning_rate)
+        optimizer = AdamW([param for name, param in model.named_parameters() if not name.startswith("encoder.") and not name.startswith("module.encoder.")], lr=args.learning_rate)
     else:
         optimizer = AdamW(model.parameters(), lr=args.learning_rate)
 
@@ -364,21 +438,23 @@ def main():
         seq2seq_weight=args.seq2seq_weight,
     ).to(device)
 
-    # Load states
+    # Load states (only the model without DDP wrapper should be passed to load_states)
+    model_to_load = model.module if distributed else model
     current_step = load_states(
         save_dir=args.save_path,
-        model=model,
+        model=model_to_load,
         optimizer=optimizer,
         scheduler=scheduler,
         initial_checkpoint=args.initial_checkpoint,
         only_encoder=args.only_encoder,
     )
 
-    # Save arguments
-    with open(os.path.join(args.save_path, 'args.yaml'), 'w', encoding='utf-8') as args_file:
-        args_file.write(
-            yaml.safe_dump(args.__dict__, default_flow_style=False)
-        )
+    # Save arguments (only from main process)
+    if is_main_process:
+        with open(os.path.join(args.save_path, 'args.yaml'), 'w', encoding='utf-8') as args_file:
+            args_file.write(
+                yaml.safe_dump(args.__dict__, default_flow_style=False)
+            )
 
     train(
         model=model,
@@ -395,9 +471,15 @@ def main():
         current_step=current_step,
         log_interval=args.log_interval,
         eval_interval=args.eval_interval,
-        log_wandb=args.log_wandb,
-        save_interval=args.save_interval
+        log_wandb=args.log_wandb and is_main_process,
+        save_interval=args.save_interval,
+        distributed=distributed,
+        is_main_process=is_main_process,
     )
+    
+    # Cleanup distributed training
+    if distributed:
+        dist.destroy_process_group()
 
 
 if __name__ == '__main__':

@@ -31,6 +31,8 @@ def train_one_epoch(
         save_dir: str | None = None,
         data_loader_eval: torch.utils.data.DataLoader | None = None,
         log_wandb: bool = False,
+        distributed: bool = False,
+        is_main_process: bool = True,
         ) -> int:
     model = model.train()
 
@@ -88,14 +90,16 @@ def train_one_epoch(
         batch_time.update(elapsed)
         samples_per_sec.update(out_seq2seq.size(0) / elapsed)
 
-        if batch_idx % log_interval == 0 or batch_idx == last_step:
+        if is_main_process and (batch_idx % log_interval == 0 or batch_idx == last_step):
             print(f'Batch {batch_idx + 1} of {len(data_loader)}. Batch time (data): {batch_time.avg:.2f} ({batch_time_data.avg:.2f}). Train loss: {losses.avg:.6f}')
             # print(f'Samples/second: {samples_per_sec.avg:.2f}')
             # print(f'Max. memory allocated/reserved: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f}/{torch.cuda.max_memory_reserved() / (1024 ** 3):.2f} GB')
 
-        if save_interval is not None and current_step % save_interval == 0:
+        if save_interval is not None and current_step % save_interval == 0 and is_main_process:
+            # Save only from main process and unwrap DDP model if needed
+            model_to_save = model.module if distributed else model
             states = {
-                'model': model.state_dict(),
+                'model': model_to_save.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'scheduler': scheduler.state_dict(),
                 'step': current_step,
@@ -104,7 +108,7 @@ def train_one_epoch(
             torch.save(states, os.path.join(save_dir, f'{current_step}.bin'))
             torch.save(states, os.path.join(save_dir, 'last.bin'))
 
-        if eval_interval is not None and current_step % eval_interval == 0:
+        if eval_interval is not None and current_step % eval_interval == 0 and is_main_process:
             print('Starting eval pass')
             eval_loss, eval_loss_linear, eval_loss_seq2seq, eval_seq_acc, eval_token_acc, eval_flat_acc = evaluate(
                 model=model,
@@ -224,9 +228,12 @@ def train(
         eval_interval: int = 1000,
         save_interval: int = 1000,
         log_wandb: bool = False,
+        distributed: bool = False,
+        is_main_process: bool = True,
         ):
     while current_step < total_steps:
-        print(f'Completed {current_step} of {total_steps} steps. Starting new epoch.')
+        if is_main_process:
+            print(f'Completed {current_step} of {total_steps} steps. Starting new epoch.')
 
         current_step = train_one_epoch(
             model,
@@ -242,4 +249,6 @@ def train(
             save_dir=save_dir,
             data_loader_eval=data_loaders['data_loader_val'],
             log_wandb=log_wandb,
+            distributed=distributed,
+            is_main_process=is_main_process,
         )
