@@ -6,31 +6,34 @@
 
 import glob
 import os
+from pathlib import Path
 
 import pandas as pd
 
 
-DATA_DIR = r'Y:\pc-to-Y\hisco\data\251003\PST2_AUG_RETRAINING'
+# Use relative path from script location to Data directory
+SCRIPT_DIR = Path(__file__).parent.absolute()
+DATA_DIR = SCRIPT_DIR / 'Data' / 'PST2_AUG_RETRAINING'
 
 
 def find_files(include_gpt: bool = True) -> list[str]:
     # Find HISCO sets
-    files = glob.glob(os.path.join(DATA_DIR, 'hisco_inferred/Training_data/*'))
+    files = glob.glob(str(DATA_DIR / 'hisco_inferred' / 'Training_data' / '*'))
 
     # Find new "fuzzy" English data
     files.extend(
-        [f for f in glob.glob(os.path.join(DATA_DIR, 'new_mappings/fuzzy_duplicates/*')) if 'pst2' in f]
+        [f for f in glob.glob(str(DATA_DIR / 'new_mappings' / 'fuzzy_duplicates' / '*')) if 'pst2' in f]
     )
 
     # Find the "old" but recoded data
-    files.append(os.path.join(DATA_DIR, 'pst2_old_recoded/Old_PST2_Training_Data_translated_recoded.csv'))
+    files.append(str(DATA_DIR / 'pst2_old_recoded' / 'Old_PST2_Training_Data_translated_recoded.csv'))
 
     # Add the GPT titles
     if include_gpt:
-        files.append(os.path.join(DATA_DIR, 'GPT_titles_with_pairs.csv'))
+        files.append(str(DATA_DIR / 'GPT_titles_with_pairs.csv'))
 
     # Add from scheme
-    files.append(os.path.join(DATA_DIR, 'new_pst2_scheme/pst2_summary_descriptions_clean.csv'))
+    files.append(str(DATA_DIR / 'new_pst2_scheme' / 'pst2_summary_descriptions_clean.csv'))
 
     return files
 
@@ -84,9 +87,11 @@ def write_all():
     data['occ1'] = data['occ1'].transform(lambda x: x.replace('\n', ' '))
 
     # Write
-    fn_out = r'Z:\faellesmappe\tsdj\hisco\data\Training_data_other\pst2.csv'
+    output_dir = SCRIPT_DIR / 'Data' / 'Training_data_other'
+    output_dir.mkdir(parents=True, exist_ok=True)
+    fn_out = output_dir / 'pst2.csv'
 
-    if os.path.isfile(fn_out):
+    if fn_out.exists():
         raise FileExistsError(fn_out)
 
     data.to_csv(fn_out, index=False)
@@ -99,7 +104,9 @@ def write_all():
         'system_code': keyset,
         'code': range(len(keyset)),
     })
-    key.to_csv(r'Z:\faellesmappe\tsdj\hisco\pst2\mixer-pst2-v3\key_manual.csv', index=False)
+    key_dir = SCRIPT_DIR / 'Data' / 'pst2' / 'mixer-pst2-v3'
+    key_dir.mkdir(parents=True, exist_ok=True)
+    key.to_csv(key_dir / 'key_manual.csv', index=False)
 
 
 def main():
