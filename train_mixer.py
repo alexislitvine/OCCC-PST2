@@ -3,9 +3,12 @@ import os
 import yaml
 
 import torch
+import torch.distributed as dist
 
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel as DDP
 from transformers import (
     get_linear_schedule_with_warmup,
     CanineTokenizer,
@@ -69,6 +72,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--target-cols', type=str, nargs='+', default=None, help='List of column names with labels')
     parser.add_argument('--block-size', type=int, default=5, help='Maximum number of characters in target (e.g., this is 5 for the HISCO system)')
     parser.add_argument('--use-within-block-sep', action='store_true', default=False, help='Whether to use "," as a separator for tokens WITHIN a code. Useful for, e.g., PSTI')
+    
+    # Distributed training
+    parser.add_argument('--distributed', action='store_true', default=False, help='Enable distributed training across multiple GPUs')
+    parser.add_argument('--local_rank', type=int, default=-1, help='Local rank for distributed training (set automatically by torch.distributed.launch)')
+    parser.add_argument('--world-size', type=int, default=1, help='Number of processes for distributed training')
 
     # Logging parameters
     parser.add_argument('--log-interval', type=int, default=100, help='Number of steps between reporting training stats')
@@ -164,8 +172,31 @@ def setup_formatter(args: argparse.Namespace) -> BlockyFormatter | BlockyHISCOFo
 
 def main():
     args = parse_args()
+    
+    # Setup distributed training
+    local_rank = args.local_rank
+    distributed = args.distributed
+    
+    # Initialize distributed training if enabled
+    if distributed:
+        if local_rank == -1:
+            # If local_rank is not set, try to get it from environment variable
+            local_rank = int(os.environ.get('LOCAL_RANK', 0))
+        
+        # Initialize the process group
+        dist.init_process_group(backend='nccl')
+        torch.cuda.set_device(local_rank)
+        device = torch.device(f'cuda:{local_rank}')
+        world_size = dist.get_world_size()
+        
+        # Only print from the main process
+        is_main_process = local_rank == 0
+    else:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        is_main_process = True
+        world_size = 1
 
-    if args.log_wandb:
+    if args.log_wandb and is_main_process:
         wandb_init(
             output_dir=args.save_dir,
             project=args.wandb_project_name,
@@ -191,25 +222,51 @@ def main():
         num_classes_flat=num_classes_flat,
     )
 
-    # Data loaders
-    data_loader_train = DataLoader(
-        dataset_train,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=args.num_workers,
-        pin_memory=args.pin_memory,
+    # Data loaders with distributed samplers if needed
+    if distributed:
+        train_sampler = DistributedSampler(
+            dataset_train,
+            num_replicas=world_size,
+            rank=local_rank,
+            shuffle=True,
         )
-    data_loader_val = DataLoader(
-        dataset_val,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-        pin_memory=args.pin_memory,
+        val_sampler = DistributedSampler(
+            dataset_val,
+            num_replicas=world_size,
+            rank=local_rank,
+            shuffle=False,
+        )
+        data_loader_train = DataLoader(
+            dataset_train,
+            batch_size=args.batch_size,
+            sampler=train_sampler,
+            num_workers=args.num_workers,
+            pin_memory=args.pin_memory,
+        )
+        data_loader_val = DataLoader(
+            dataset_val,
+            batch_size=args.batch_size,
+            sampler=val_sampler,
+            num_workers=args.num_workers,
+            pin_memory=args.pin_memory,
+        )
+    else:
+        data_loader_train = DataLoader(
+            dataset_train,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.num_workers,
+            pin_memory=args.pin_memory,
+        )
+        data_loader_val = DataLoader(
+            dataset_val,
+            batch_size=args.batch_size,
+            shuffle=False,
+            num_workers=args.num_workers,
+            pin_memory=args.pin_memory,
         )
 
     # Setup model, optimizer, scheduler
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
     model = Seq2SeqMixerOccCANINE(
         model_domain='Multilingual_CANINE',
         num_classes=formatter.num_classes, # FIXME potentially breaks to extract from formatter
@@ -217,6 +274,10 @@ def main():
         dropout_rate=args.dropout,
         decoder_dim_feedforward=args.decoder_dim_feedforward,
     ).to(device)
+    
+    # Wrap model with DDP if distributed
+    if distributed:
+        model = DDP(model, device_ids=[local_rank], output_device=local_rank)
 
     optimizer = AdamW(model.parameters(), lr=args.learning_rate)
     total_steps = len(data_loader_train) * args.num_epochs
@@ -239,21 +300,23 @@ def main():
         seq2seq_weight=args.seq2seq_weight,
     ).to(device)
 
-    # Load states
+    # Load states (only the model without DDP wrapper should be passed to load_states)
+    model_to_load = model.module if distributed else model
     current_step = load_states(
         save_dir=args.save_dir,
-        model=model,
+        model=model_to_load,
         optimizer=optimizer,
         scheduler=scheduler,
         initial_checkpoint=args.initial_checkpoint,
         only_encoder=args.only_encoder,
     )
 
-    # Save arguments
-    with open(os.path.join(args.save_dir, 'args.yaml'), 'w', encoding='utf-8') as args_file:
-        args_file.write(
-            yaml.safe_dump(args.__dict__, default_flow_style=False)
-        )
+    # Save arguments (only from main process)
+    if is_main_process:
+        with open(os.path.join(args.save_dir, 'args.yaml'), 'w', encoding='utf-8') as args_file:
+            args_file.write(
+                yaml.safe_dump(args.__dict__, default_flow_style=False)
+            )
 
     train(
         model=model,
@@ -271,8 +334,14 @@ def main():
         log_interval=args.log_interval,
         eval_interval=args.eval_interval,
         save_interval=args.save_interval,
-        log_wandb=args.log_wandb,
+        log_wandb=args.log_wandb and is_main_process,
+        distributed=distributed,
+        is_main_process=is_main_process,
     )
+    
+    # Cleanup distributed training
+    if distributed:
+        dist.destroy_process_group()
 
 
 if __name__ == '__main__':
