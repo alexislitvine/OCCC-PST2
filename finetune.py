@@ -204,7 +204,9 @@ def prepare_data(
             return mapping
 
     # Load
+    print(f'Loading data from {dataset}...')
     data: pd.DataFrame = pd.read_csv(dataset, dtype=str)
+    print(f'Loaded {len(data):,} observations.')
 
     # Select columns
     if language_col is None:
@@ -216,14 +218,17 @@ def prepare_data(
     data = data.rename(columns={input_col: 'occ1'})
 
     # Value checks, subsetting, and changing some values
+    print('Validating and preparing target columns...')
     data = prepare_target_cols(
         data=data,
         formatter=formatter,
         drop_bad_rows=drop_bad_rows,
         allow_codes_shorter_than_block_size=allow_codes_shorter_than_block_size,
     )
+    print(f'Target column preparation complete. {len(data):,} observations remaining.')
 
     # Build code <-> label mapping
+    print('Building code-to-label mapping...')
     unique_values = pd.unique(data[formatter.target_cols].values.ravel())
     unique_values = [val for val in unique_values if val is not None]
 
@@ -231,15 +236,20 @@ def prepare_data(
         code: i for i, code in enumerate(unique_values)
         }
     mapping_df = pd.DataFrame(mapping.items(), columns=['system_code', 'code'])
+    print(f'Created mapping for {len(mapping):,} unique codes.')
 
     # Split data into train and validation
+    print(f'Splitting data into train and validation sets (validation share: {share_val:.1%})...')
     data_val = data.sample(int(len(data) * share_val), random_state=42)
     data_train = data.drop(data_val.index)
+    print(f'Split complete: {len(data_train):,} training observations, {len(data_val):,} validation observations.')
 
     # Save datasets & mapping in specified fine-tuning folder
+    print(f'Saving prepared data to {save_path}...')
     data_train.to_csv(os.path.join(save_path, 'data_train.csv'), index=False)
     data_val.to_csv(os.path.join(save_path, 'data_val.csv'), index=False)
     mapping_df.to_csv(os.path.join(save_path, 'key.csv'), index=False)
+    print('Data files saved successfully (data_train.csv, data_val.csv, key.csv).')
 
     return mapping
 
