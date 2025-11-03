@@ -327,6 +327,7 @@ def main():
             drop_bad_rows=args.drop_bad_labels,
             allow_codes_shorter_than_block_size=args.allow_codes_shorter_than_block_size,
         )
+        print("Data preparation stage completed.")
     
     # Wait for main process to finish data preparation
     if distributed:
