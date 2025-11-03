@@ -89,6 +89,9 @@ def parse_args():
 
     # Freezing
     parser.add_argument('--freeze-encoder', action='store_true', default=False)
+    
+    # Data preparation only
+    parser.add_argument('--prepare-only', action='store_true', default=False, help='Only prepare data (write data_train.csv, data_val.csv, and key.csv) then exit before model/dataloaders/training')
 
     args = parser.parse_args()
 
@@ -339,6 +342,21 @@ def main():
             if mapping is None:
                 raise RuntimeError("Data preparation failed on main process")
             map_code_label = mapping
+    
+    # Exit early if --prepare-only was specified
+    if args.prepare_only:
+        if is_main_process:
+            print(f"Data preparation complete. Files written to {args.save_path}:")
+            print(f"  - data_train.csv")
+            print(f"  - data_val.csv")
+            print(f"  - key.csv")
+            print("Exiting due to --prepare-only flag (skipping model/dataloaders/training)")
+        
+        # Cleanup distributed training if needed
+        if distributed:
+            dist.destroy_process_group()
+        
+        return
     
     num_classes_flat = len(map_code_label)
 
