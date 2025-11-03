@@ -352,8 +352,9 @@ def main():
             print(f"  - key.csv")
             print("Exiting due to --prepare-only flag (skipping model/dataloaders/training)")
         
-        # Cleanup distributed training if needed
+        # Synchronize all processes before cleanup
         if distributed:
+            dist.barrier()
             dist.destroy_process_group()
         
         return
