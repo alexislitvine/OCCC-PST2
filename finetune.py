@@ -91,7 +91,7 @@ def parse_args():
     parser.add_argument('--freeze-encoder', action='store_true', default=False)
     
     # Data preparation only
-    parser.add_argument('--prepare-only', action='store_true', default=False, help='Only prepare data (write data_train.csv, data_val.csv, and key.csv) then exit before model/dataloaders/training')
+    parser.add_argument('--prepare-only', action='store_true', default=False, help='Only prepare data (write data_train.csv, data_val.csv, and key.csv) then exit before model/dataloader/training initialization')
 
     args = parser.parse_args()
 
