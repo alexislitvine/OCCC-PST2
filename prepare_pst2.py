@@ -94,7 +94,7 @@ def write_all():
     print("\nCleaning data...")
     na_count = data['pst2_1'].isna().sum()
     print(f"Found {na_count} records with missing pst2_1 values")
-    assert data['pst2_1'].isna().sum() == 135
+    assert na_count == 135
     data = data[data['pst2_1'].notna()].copy()
     print(f"Records after removing missing pst2_1: {len(data)}")
 
@@ -114,7 +114,7 @@ def write_all():
     # Seems there is 1 weird NaN observation for "occ1"
     occ1_na_count = data['occ1'].isna().sum()
     print(f"Found {occ1_na_count} records with missing occ1 values")
-    assert data['occ1'].isna().sum() == 1
+    assert occ1_na_count == 1
     data = data[data['occ1'].notna()].copy()
     print(f"Records after removing missing occ1: {len(data)}")
 
