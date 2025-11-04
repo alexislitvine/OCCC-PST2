@@ -31,6 +31,9 @@ def parse_args():
     parser.add_argument('--num-epochs', type=int, default=5)
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--num-workers', type=int, default=0, help='Number of workers for data loading')
+    parser.add_argument('--prefetch-factor', type=int, default=None, help='Number of batches loaded in advance by each worker (default: None uses PyTorch default of 2)')
+    parser.add_argument('--pin-memory', action='store_true', default=False, help='Pin memory for faster data transfer to GPU')
+    parser.add_argument('--persistent-workers', action='store_true', default=False, help='Keep workers alive between epochs (requires num_workers > 0)')
 
     # Model and optimizer parameters
     parser.add_argument('--learning-rate', type=float, default=2e-05)
@@ -85,6 +88,9 @@ def main():
         seq2seq_weight=args.seq2seq_weight,
         freeze_encoder=args.freeze_encoder,
         num_workers=args.num_workers,
+        prefetch_factor=args.prefetch_factor,
+        pin_memory=args.pin_memory,
+        persistent_workers=args.persistent_workers,
         use_amp=args.use_amp,
     )
 

@@ -78,6 +78,9 @@ def parse_args():
     parser.add_argument('--num-epochs', type=int, default=5)
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--num-workers', type=int, default=0, help='Number of workers for data loading')
+    parser.add_argument('--prefetch-factor', type=int, default=None, help='Number of batches loaded in advance by each worker (default: None uses PyTorch default of 2)')
+    parser.add_argument('--pin-memory', action='store_true', default=False, help='Pin memory for faster data transfer to GPU')
+    parser.add_argument('--persistent-workers', action='store_true', default=False, help='Keep workers alive between epochs (requires num_workers > 0)')
 
     # Model and optimizer parameters
     parser.add_argument('--learning-rate', type=float, default=2e-05)
@@ -396,6 +399,17 @@ def main():
     )
 
     # Data loaders with distributed samplers if needed
+    # Build DataLoader kwargs
+    dataloader_kwargs = {
+        'num_workers': args.num_workers,
+        'pin_memory': args.pin_memory,
+    }
+    if args.num_workers > 0:
+        if args.persistent_workers:
+            dataloader_kwargs['persistent_workers'] = True
+        if args.prefetch_factor is not None:
+            dataloader_kwargs['prefetch_factor'] = args.prefetch_factor
+    
     if distributed:
         train_sampler = DistributedSampler(
             dataset_train,
@@ -413,26 +427,26 @@ def main():
             dataset_train,
             batch_size=args.batch_size,
             sampler=train_sampler,
-            num_workers=args.num_workers,
+            **dataloader_kwargs,
         )
         data_loader_val = DataLoader(
             dataset_val,
             batch_size=args.batch_size,
             sampler=val_sampler,
-            num_workers=args.num_workers,
+            **dataloader_kwargs,
         )
     else:
         data_loader_train = DataLoader(
             dataset_train,
             batch_size=args.batch_size,
             shuffle=True,
-            num_workers=args.num_workers,
+            **dataloader_kwargs,
         )
         data_loader_val = DataLoader(
             dataset_val,
             batch_size=args.batch_size,
             shuffle=False,
-            num_workers=args.num_workers,
+            **dataloader_kwargs,
         )
 
     # Setup model, optimizer, scheduler
