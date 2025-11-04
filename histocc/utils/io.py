@@ -44,7 +44,7 @@ def load_states(
     if initial_checkpoint.lower() == 'occ-canine-v1':
         print('Initializing encoder from HF (christianvedel/OccCANINE)')
         encoder = CANINEOccupationClassifier_hub.from_pretrained("christianvedel/OccCANINE")
-        model.encoder.load_state_dict(encoder.basemodel.state_dict())
+        model.encoder.load_state_dict(encoder_state_dict, strict=False)
         model.linear_decoder.load_state_dict(encoder.out.state_dict()) # FIXME this leads to an issue when trying to set up model with other number of classes than that of the HISCO system
         # TODO check encoder is properly garbage collected
 
