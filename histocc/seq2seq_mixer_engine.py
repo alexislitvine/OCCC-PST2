@@ -2,7 +2,7 @@ import os
 import time
 
 import torch
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 
 from torch import nn
 from sklearn.metrics import accuracy_score
@@ -64,7 +64,7 @@ def train_one_epoch(
 
         # Forward pass with optional AMP
         if scaler is not None:
-            with autocast(device_type='cuda'):
+            with autocast('cuda'):
                 out_seq2seq, out_linear = model(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
@@ -259,7 +259,7 @@ def train(
         use_amp: bool = False,
         ):
     # Initialize GradScaler for AMP if enabled
-    scaler = GradScaler() if use_amp else None
+    scaler = GradScaler('cuda') if use_amp else None
     
     while current_step < total_steps:
         if is_main_process:

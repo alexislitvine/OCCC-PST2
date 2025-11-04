@@ -64,7 +64,7 @@ class TestFinetuneArgParsing(unittest.TestCase):
         with open(engine_path, 'r') as f:
             content = f.read()
             # Check that AMP imports are present
-            self.assertIn("from torch.cuda.amp import autocast, GradScaler", content,
+            self.assertIn("from torch.amp import autocast, GradScaler", content,
                          "seq2seq_mixer_engine.py should import AMP components")
             # Check that scaler parameter is in function signature
             self.assertIn("scaler: GradScaler | None = None", content,
@@ -73,7 +73,7 @@ class TestFinetuneArgParsing(unittest.TestCase):
             self.assertIn("use_amp: bool = False", content,
                          "train function should accept use_amp parameter")
             # Check that GradScaler is initialized
-            self.assertIn("scaler = GradScaler() if use_amp else None", content,
+            self.assertIn("scaler = GradScaler('cuda') if use_amp else None", content,
                          "train function should initialize GradScaler when use_amp is True")
     
     def test_prediction_assets_finetune_signature(self):
@@ -108,7 +108,7 @@ class TestAMPImplementation(unittest.TestCase):
             # Check that autocast is used conditionally
             self.assertIn("if scaler is not None:", content,
                          "Should check if scaler is provided")
-            self.assertIn("with autocast(device_type='cuda'):", content,
+            self.assertIn("with autocast('cuda'):", content,
                          "Should use autocast when scaler is present")
             # Check that scaler is used for backward pass
             self.assertIn("scaler.scale(loss).backward()", content,
