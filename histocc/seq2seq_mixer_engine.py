@@ -2,6 +2,7 @@ import os
 import time
 
 import torch
+from torch.cuda.amp import autocast, GradScaler
 
 from torch import nn
 from sklearn.metrics import accuracy_score
@@ -33,6 +34,7 @@ def train_one_epoch(
         log_wandb: bool = False,
         distributed: bool = False,
         is_main_process: bool = True,
+        scaler: GradScaler | None = None,
         ) -> int:
     model = model.train()
 
@@ -60,30 +62,54 @@ def train_one_epoch(
         target_seq2seq_input = targets_seq2seq[:, :-1]
         target_mask, target_padding_mask = create_mask(target_seq2seq_input, PAD_IDX, device)
 
-        # Forward pass
-        out_seq2seq, out_linear = model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            target=target_seq2seq_input,
-            target_mask=target_mask,
-            target_padding_mask=target_padding_mask,
-        )
+        # Forward pass with optional AMP
+        if scaler is not None:
+            with autocast(device_type='cuda'):
+                out_seq2seq, out_linear = model(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    target=target_seq2seq_input,
+                    target_mask=target_mask,
+                    target_padding_mask=target_padding_mask,
+                )
 
-        loss = loss_fn(
-            out_seq2seq=out_seq2seq,
-            out_linear=out_linear,
-            target_seq2seq=targets_seq2seq,
-            target_linear=targets_linear,
+                loss = loss_fn(
+                    out_seq2seq=out_seq2seq,
+                    out_linear=out_linear,
+                    target_seq2seq=targets_seq2seq,
+                    target_linear=targets_linear,
+                    )
+        else:
+            out_seq2seq, out_linear = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                target=target_seq2seq_input,
+                target_mask=target_mask,
+                target_padding_mask=target_padding_mask,
             )
+
+            loss = loss_fn(
+                out_seq2seq=out_seq2seq,
+                out_linear=out_linear,
+                target_seq2seq=targets_seq2seq,
+                target_linear=targets_linear,
+                )
         losses.update(loss.item(), out_seq2seq.size(0))
 
-        # Backward pass & step
+        # Backward pass & step with optional AMP
         optimizer.zero_grad()
-        loss.backward()
-
-        nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-
-        optimizer.step()
+        
+        if scaler is not None:
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            loss.backward()
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            optimizer.step()
+        
         scheduler.step()
 
         elapsed = time.time() - end
@@ -230,7 +256,11 @@ def train(
         log_wandb: bool = False,
         distributed: bool = False,
         is_main_process: bool = True,
+        use_amp: bool = False,
         ):
+    # Initialize GradScaler for AMP if enabled
+    scaler = GradScaler() if use_amp else None
+    
     while current_step < total_steps:
         if is_main_process:
             print(f'Completed {current_step} of {total_steps} steps. Starting new epoch.')
@@ -251,4 +281,5 @@ def train(
             log_wandb=log_wandb,
             distributed=distributed,
             is_main_process=is_main_process,
+            scaler=scaler,
         )

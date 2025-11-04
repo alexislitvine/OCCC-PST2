@@ -1420,6 +1420,8 @@ class OccCANINE:
             warmup_steps: int = 500,
             seq2seq_weight: float = 0.1,
             freeze_encoder: bool = True,
+            num_workers: int = 0,
+            use_amp: bool = False,
             ):
         
         """
@@ -1442,6 +1444,8 @@ class OccCANINE:
         - warmup_steps (int): Number of warmup steps for the learning rate scheduler.
         - seq2seq_weight (float): Weight for the seq2seq loss in the mixed loss function.
         - freeze_encoder (bool): If True, freezes the encoder parameters during training. (Only the top layer will be trained)
+        - num_workers (int): Number of workers for data loading. Default is 0 (main process only).
+        - use_amp (bool): If True, uses Automatic Mixed Precision (AMP) for training. Default is False.
 
         """
         
@@ -1507,11 +1511,13 @@ class OccCANINE:
             dataset_train,
             batch_size=self.batch_size,
             shuffle=True,
+            num_workers=num_workers,
             )
         data_loader_val = DataLoader(
             dataset_val,
             batch_size=self.batch_size,
             shuffle=False,
+            num_workers=num_workers,
             )
 
         if freeze_encoder:
@@ -1565,7 +1571,8 @@ class OccCANINE:
             current_step=current_step,
             log_interval=log_interval,
             eval_interval=eval_interval,
-            save_interval=save_interval
+            save_interval=save_interval,
+            use_amp=use_amp,
         )
 
         # TODO: We should save the model here - relevant for small sample finetuning, where default save_interval is not met frequently enough

@@ -30,6 +30,7 @@ def parse_args():
     # Data parameters
     parser.add_argument('--num-epochs', type=int, default=5)
     parser.add_argument('--batch-size', type=int, default=128)
+    parser.add_argument('--num-workers', type=int, default=0, help='Number of workers for data loading')
 
     # Model and optimizer parameters
     parser.add_argument('--learning-rate', type=float, default=2e-05)
@@ -41,6 +42,9 @@ def parse_args():
 
     # Freezing
     parser.add_argument('--freeze-encoder', action='store_true', default=False)
+    
+    # Mixed precision training
+    parser.add_argument('--use-amp', action='store_true', default=False, help='Use Automatic Mixed Precision (AMP) for training')
 
     args = parser.parse_args()
 
@@ -80,6 +84,8 @@ def main():
         warmup_steps=args.warmup_steps,
         seq2seq_weight=args.seq2seq_weight,
         freeze_encoder=args.freeze_encoder,
+        num_workers=args.num_workers,
+        use_amp=args.use_amp,
     )
 
 
