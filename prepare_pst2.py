@@ -102,7 +102,7 @@ def write_all():
     # is error
     no_comma_count = (~data['pst2_1'].str.contains(',')).sum()
     print(f"Found {no_comma_count} records without comma in pst2_1")
-    assert (~data['pst2_1'].str.contains(',')).sum() == 135
+    assert no_comma_count == 135
     data = data[data['pst2_1'].str.contains(',')]
     print(f"Records after removing invalid pst2_1 format: {len(data)}")
 
