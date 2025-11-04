@@ -77,6 +77,7 @@ def parse_args():
     # Data parameters
     parser.add_argument('--num-epochs', type=int, default=5)
     parser.add_argument('--batch-size', type=int, default=128)
+    parser.add_argument('--num-workers', type=int, default=0, help='Number of workers for data loading')
 
     # Model and optimizer parameters
     parser.add_argument('--learning-rate', type=float, default=2e-05)
@@ -89,6 +90,9 @@ def parse_args():
 
     # Freezing
     parser.add_argument('--freeze-encoder', action='store_true', default=False)
+    
+    # Mixed precision training
+    parser.add_argument('--use-amp', action='store_true', default=False, help='Use Automatic Mixed Precision (AMP) for training')
     
     # Data preparation only
     parser.add_argument('--prepare-only', action='store_true', default=False, help='Only prepare data (write data_train.csv, data_val.csv, and key.csv) then exit before model/dataloader/training initialization')
@@ -409,22 +413,26 @@ def main():
             dataset_train,
             batch_size=args.batch_size,
             sampler=train_sampler,
+            num_workers=args.num_workers,
         )
         data_loader_val = DataLoader(
             dataset_val,
             batch_size=args.batch_size,
             sampler=val_sampler,
+            num_workers=args.num_workers,
         )
     else:
         data_loader_train = DataLoader(
             dataset_train,
             batch_size=args.batch_size,
             shuffle=True,
+            num_workers=args.num_workers,
         )
         data_loader_val = DataLoader(
             dataset_val,
             batch_size=args.batch_size,
             shuffle=False,
+            num_workers=args.num_workers,
         )
 
     # Setup model, optimizer, scheduler
@@ -505,6 +513,7 @@ def main():
         save_interval=args.save_interval,
         distributed=distributed,
         is_main_process=is_main_process,
+        use_amp=args.use_amp,
     )
     
     # Cleanup distributed training
