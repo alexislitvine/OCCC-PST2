@@ -1421,6 +1421,9 @@ class OccCANINE:
             seq2seq_weight: float = 0.1,
             freeze_encoder: bool = True,
             num_workers: int = 0,
+            prefetch_factor: int | None = None,
+            pin_memory: bool = False,
+            persistent_workers: bool = False,
             use_amp: bool = False,
             ):
         
@@ -1445,6 +1448,9 @@ class OccCANINE:
         - seq2seq_weight (float): Weight for the seq2seq loss in the mixed loss function.
         - freeze_encoder (bool): If True, freezes the encoder parameters during training. (Only the top layer will be trained)
         - num_workers (int): Number of workers for data loading. Default is 0 (main process only).
+        - prefetch_factor (int or None): Number of batches loaded in advance by each worker. Default is None (uses PyTorch default of 2).
+        - pin_memory (bool): If True, pins memory for faster data transfer to GPU. Default is False.
+        - persistent_workers (bool): If True, keeps workers alive between epochs (requires num_workers > 0). Default is False.
         - use_amp (bool): If True, uses Automatic Mixed Precision (AMP) for training. Default is False.
 
         """
@@ -1507,17 +1513,28 @@ class OccCANINE:
             dataset_val.map_code_label = None
 
         # Data loaders
+        # Build DataLoader kwargs
+        dataloader_kwargs = {
+            'num_workers': num_workers,
+            'pin_memory': pin_memory,
+        }
+        if num_workers > 0:
+            if persistent_workers:
+                dataloader_kwargs['persistent_workers'] = True
+            if prefetch_factor is not None:
+                dataloader_kwargs['prefetch_factor'] = prefetch_factor
+        
         data_loader_train = DataLoader(
             dataset_train,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=num_workers,
+            **dataloader_kwargs,
             )
         data_loader_val = DataLoader(
             dataset_val,
             batch_size=self.batch_size,
             shuffle=False,
-            num_workers=num_workers,
+            **dataloader_kwargs,
             )
 
         if freeze_encoder:

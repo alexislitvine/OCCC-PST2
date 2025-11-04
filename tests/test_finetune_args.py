@@ -29,9 +29,12 @@ class TestFinetuneArgParsing(unittest.TestCase):
                          "finetune.py should have --num-workers argument")
             self.assertIn("--use-amp", content, 
                          "finetune.py should have --use-amp argument")
-            # Check that num_workers is passed to DataLoader
-            self.assertIn("num_workers=args.num_workers", content,
-                         "finetune.py should pass num_workers to DataLoader")
+            # Check that num_workers is used in dataloader_kwargs or passed to DataLoader
+            self.assertTrue(
+                "num_workers=args.num_workers" in content or 
+                "'num_workers': args.num_workers" in content,
+                "finetune.py should pass num_workers to DataLoader"
+            )
             # Check that use_amp is passed to train function
             self.assertIn("use_amp=args.use_amp", content,
                          "finetune.py should pass use_amp to train function")
@@ -90,8 +93,11 @@ class TestFinetuneArgParsing(unittest.TestCase):
             self.assertIn("use_amp: bool = False", content,
                          "finetune method should accept use_amp parameter")
             # Check that they're used in the method
-            self.assertIn("num_workers=num_workers", content,
-                         "finetune method should pass num_workers to DataLoader")
+            self.assertTrue(
+                "num_workers=num_workers" in content or 
+                "'num_workers': num_workers" in content,
+                "finetune method should pass num_workers to DataLoader"
+            )
             self.assertIn("use_amp=use_amp", content,
                          "finetune method should pass use_amp to train function")
 
