@@ -3,6 +3,7 @@ import time
 
 import torch
 from torch.amp import autocast, GradScaler
+from tqdm import tqdm
 
 from torch import nn
 from sklearn.metrics import accuracy_score
@@ -26,6 +27,7 @@ def train_one_epoch(
         device: torch.device,
         scheduler: torch.optim.lr_scheduler.LRScheduler,
         current_step: int,
+        epoch: int = 0,
         log_interval: int = 100,
         eval_interval: int | None = None,
         save_interval: int | None = None,
@@ -47,14 +49,17 @@ def train_one_epoch(
     # Need to initialize first "end time", as this is
     # calculated at bottom of batch loop
     end = time.time()
+    
+    # Use tqdm progress bar only on rank 0
+    iterator = tqdm(data_loader, disable=not is_main_process, ncols=100, desc=f"Epoch {epoch}")
 
-    for batch_idx, batch in enumerate(data_loader):
+    for batch_idx, batch in enumerate(iterator):
         current_step += 1
 
-        input_ids = batch["input_ids"].to(device)
-        attention_mask = batch["attention_mask"].to(device)
-        targets_seq2seq = batch['targets_seq2seq'].to(device)
-        targets_linear = batch['targets_linear'].to(device)
+        input_ids = batch["input_ids"].to(device, non_blocking=True)
+        attention_mask = batch["attention_mask"].to(device, non_blocking=True)
+        targets_seq2seq = batch['targets_seq2seq'].to(device, non_blocking=True)
+        targets_linear = batch['targets_linear'].to(device, non_blocking=True)
 
         batch_time_data.update(time.time() - end)
 
@@ -186,10 +191,10 @@ def evaluate(
     flat_accs = Averager()
 
     for batch_idx, batch in enumerate(data_loader):
-        input_ids = batch["input_ids"].to(device)
-        attention_mask = batch["attention_mask"].to(device)
-        targets_seq2seq = batch['targets_seq2seq'].to(device)
-        targets_linear = batch['targets_linear'].to(device)
+        input_ids = batch["input_ids"].to(device, non_blocking=True)
+        attention_mask = batch["attention_mask"].to(device, non_blocking=True)
+        targets_seq2seq = batch['targets_seq2seq'].to(device, non_blocking=True)
+        targets_linear = batch['targets_linear'].to(device, non_blocking=True)
 
         # Prepare target as input for seq2seq model
         target_seq2seq_input = targets_seq2seq[:, :-1]
@@ -243,6 +248,7 @@ def evaluate(
 def train(
         model: Seq2SeqMixerOccCANINE,
         data_loaders: dict[str, torch.utils.data.DataLoader], # TODO split or use dataclass
+        train_sampler: torch.utils.data.distributed.DistributedSampler | None,
         loss_fn: LossMixer,
         optimizer: torch.optim.Optimizer,
         device: torch.device,
@@ -261,9 +267,14 @@ def train(
     # Initialize GradScaler for AMP if enabled
     scaler = GradScaler('cuda') if use_amp else None
     
+    epoch = 0
     while current_step < total_steps:
         if is_main_process:
-            print(f'Completed {current_step} of {total_steps} steps. Starting new epoch.')
+            print(f'Completed {current_step} of {total_steps} steps. Starting epoch {epoch}.')
+        
+        # Set epoch for distributed sampler
+        if distributed and train_sampler is not None:
+            train_sampler.set_epoch(epoch)
 
         current_step = train_one_epoch(
             model,
@@ -273,6 +284,7 @@ def train(
             device,
             scheduler,
             current_step=current_step,
+            epoch=epoch,
             log_interval=log_interval,
             eval_interval=eval_interval,
             save_interval=save_interval,
@@ -283,3 +295,5 @@ def train(
             is_main_process=is_main_process,
             scaler=scaler,
         )
+        
+        epoch += 1
