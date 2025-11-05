@@ -28,7 +28,7 @@ def load_states(
     if 'last.bin' in os.listdir(save_dir):
         print(f'Model states exist at {save_dir}. Resuming from last.bin')
 
-        states = torch.load(os.path.join(save_dir, 'last.bin'))
+        states = torch.load(os.path.join(save_dir, 'last.bin'), weights_only=False)
 
         model.load_state_dict(states['model'])
         optimizer.load_state_dict(states['optimizer'])
@@ -51,7 +51,7 @@ def load_states(
         return 0
 
     print(f'Initializing model from {initial_checkpoint}')
-    states = torch.load(initial_checkpoint)
+    states = torch.load(initial_checkpoint, weights_only=False)
 
     if only_encoder:
         print('Only loading encoder from --initial-checkpoint')

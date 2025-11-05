@@ -3,6 +3,7 @@ import os
 
 import torch
 import torch.distributed as dist
+import torch.backends.cudnn as cudnn
 import yaml
 
 from torch.optim import AdamW
@@ -299,28 +300,34 @@ def main():
     # Arguments
     args = parse_args()
     
-    # Setup distributed training
-    local_rank = args.local_rank
-    distributed = args.distributed
+    # Distributed init & device selection
+    world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    distributed = world_size > 1
+    local_rank = int(os.environ.get("LOCAL_RANK", "0"))
     
-    # Initialize distributed training if enabled
-    if distributed:
-        if local_rank == -1:
-            # If local_rank is not set, try to get it from environment variable
-            local_rank = int(os.environ.get('LOCAL_RANK', 0))
-        
-        # Initialize the process group
-        dist.init_process_group(backend='nccl')
+    # Set CUDA device before initializing process group to avoid NCCL warnings
+    if torch.cuda.is_available():
         torch.cuda.set_device(local_rank)
-        device = torch.device(f'cuda:{local_rank}')
-        world_size = dist.get_world_size()
-        
-        # Only print from the main process
-        is_main_process = local_rank == 0
-    else:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        is_main_process = True
-        world_size = 1
+    device = torch.device(f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu")
+    
+    if distributed and not dist.is_initialized():
+        dist.init_process_group(backend="nccl", init_method="env://")
+        # Barrier with device_id to avoid "devices used ... unknown" warnings
+        if torch.cuda.is_available():
+            dist.barrier(device_ids=[local_rank])
+    
+    def is_main_process() -> bool:
+        return (not distributed) or dist.get_rank() == 0
+    
+    # perf tweaks
+    cudnn.benchmark = True
+    if hasattr(torch, "set_float32_matmul_precision"):
+        torch.set_float32_matmul_precision("high")
+    
+    # optional sanity log
+    print(f"[rank={os.getenv('RANK','0')}] local_rank={local_rank} -> cuda:{torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'}")
+    if is_main_process():
+        print(f"[DDP] distributed={distributed} world_size={world_size}")
 
     # Target-side tokenization
     formatter = construct_general_purpose_formatter(
@@ -335,7 +342,7 @@ def main():
     )
 
     # Data prep (only on main process to avoid race conditions)
-    if is_main_process:
+    if is_main_process():
         map_code_label = prepare_data(
             dataset=args.dataset,
             input_col=args.input_col,
@@ -354,7 +361,7 @@ def main():
         dist.barrier()
         
         # Load prepared data on non-main processes
-        if not is_main_process:
+        if not is_main_process():
             mapping = check_if_data_prepared(args.save_path)
             if mapping is None:
                 raise RuntimeError("Data preparation failed on main process")
@@ -362,7 +369,7 @@ def main():
     
     # Exit early if --prepare-only was specified
     if args.prepare_only:
-        if is_main_process:
+        if is_main_process():
             print(f"Data preparation complete. Files written to {args.save_path}:")
             print(f"  - data_train.csv")
             print(f"  - data_val.csv")
@@ -378,7 +385,7 @@ def main():
     
     num_classes_flat = len(map_code_label)
 
-    if args.log_wandb and is_main_process:
+    if args.log_wandb and is_main_process():
         wandb_init(
             output_dir=args.save_path,
             project=args.wandb_project_name,
@@ -402,40 +409,37 @@ def main():
     # Build DataLoader kwargs
     dataloader_kwargs = {
         'num_workers': args.num_workers,
-        'pin_memory': args.pin_memory,
+        'pin_memory': True,
+        'persistent_workers': True if args.num_workers > 0 else False,
+        'prefetch_factor': 4 if args.num_workers > 0 else None,
     }
-    if args.num_workers > 0:
-        if args.persistent_workers:
-            dataloader_kwargs['persistent_workers'] = True
-        if args.prefetch_factor is not None:
-            dataloader_kwargs['prefetch_factor'] = args.prefetch_factor
     
     if distributed:
         train_sampler = DistributedSampler(
             dataset_train,
-            num_replicas=world_size,
-            rank=local_rank,
             shuffle=True,
+            drop_last=True,
         )
         val_sampler = DistributedSampler(
             dataset_val,
-            num_replicas=world_size,
-            rank=local_rank,
             shuffle=False,
         )
         data_loader_train = DataLoader(
             dataset_train,
             batch_size=args.batch_size,
+            shuffle=False,
             sampler=train_sampler,
             **dataloader_kwargs,
         )
         data_loader_val = DataLoader(
             dataset_val,
             batch_size=args.batch_size,
+            shuffle=False,
             sampler=val_sampler,
             **dataloader_kwargs,
         )
     else:
+        train_sampler = None
         data_loader_train = DataLoader(
             dataset_train,
             batch_size=args.batch_size,
@@ -458,7 +462,7 @@ def main():
     
     # Wrap model with DDP if distributed
     if distributed:
-        model = DDP(model, device_ids=[local_rank], output_device=local_rank)
+        model = DDP(model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False)
 
     if args.freeze_encoder:
         # Handle DDP wrapper when accessing model parameters
@@ -502,7 +506,7 @@ def main():
     )
 
     # Save arguments (only from main process)
-    if is_main_process:
+    if is_main_process():
         with open(os.path.join(args.save_path, 'args.yaml'), 'w', encoding='utf-8') as args_file:
             args_file.write(
                 yaml.safe_dump(args.__dict__, default_flow_style=False)
@@ -514,6 +518,7 @@ def main():
             'data_loader_train': data_loader_train,
             'data_loader_val': data_loader_val,
         },
+        train_sampler=train_sampler,
         loss_fn=loss_fn,
         optimizer=optimizer,
         device=device,
@@ -523,10 +528,10 @@ def main():
         current_step=current_step,
         log_interval=args.log_interval,
         eval_interval=args.eval_interval,
-        log_wandb=args.log_wandb and is_main_process,
+        log_wandb=args.log_wandb and is_main_process(),
         save_interval=args.save_interval,
         distributed=distributed,
-        is_main_process=is_main_process,
+        is_main_process=is_main_process(),
         use_amp=args.use_amp,
     )
     
