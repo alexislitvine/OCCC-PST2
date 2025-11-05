@@ -337,7 +337,7 @@ def main():
     )
 
     # Data prep (only on main process to avoid race conditions)
-    if is_main_process:
+    if is_main_process():
         map_code_label = prepare_data(
             dataset=args.dataset,
             input_col=args.input_col,
@@ -356,7 +356,7 @@ def main():
         dist.barrier()
         
         # Load prepared data on non-main processes
-        if not is_main_process:
+        if not is_main_process():
             mapping = check_if_data_prepared(args.save_path)
             if mapping is None:
                 raise RuntimeError("Data preparation failed on main process")
@@ -364,7 +364,7 @@ def main():
     
     # Exit early if --prepare-only was specified
     if args.prepare_only:
-        if is_main_process:
+        if is_main_process():
             print(f"Data preparation complete. Files written to {args.save_path}:")
             print(f"  - data_train.csv")
             print(f"  - data_val.csv")
@@ -380,7 +380,7 @@ def main():
     
     num_classes_flat = len(map_code_label)
 
-    if args.log_wandb and is_main_process:
+    if args.log_wandb and is_main_process():
         wandb_init(
             output_dir=args.save_path,
             project=args.wandb_project_name,
@@ -501,7 +501,7 @@ def main():
     )
 
     # Save arguments (only from main process)
-    if is_main_process:
+    if is_main_process():
         with open(os.path.join(args.save_path, 'args.yaml'), 'w', encoding='utf-8') as args_file:
             args_file.write(
                 yaml.safe_dump(args.__dict__, default_flow_style=False)
