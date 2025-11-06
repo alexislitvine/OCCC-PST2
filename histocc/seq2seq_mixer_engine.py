@@ -297,3 +297,18 @@ def train(
         )
         
         epoch += 1
+    
+    # Save model at the end of training to ensure latest version is always saved
+    if is_main_process:
+        # Save only from main process and unwrap DDP model if needed
+        model_to_save = model.module if distributed else model
+        states = {
+            'model': model_to_save.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'scheduler': scheduler.state_dict(),
+            'step': current_step,
+            'key': data_loaders['data_loader_train'].dataset.map_code_label,
+        }
+        torch.save(states, os.path.join(save_dir, f'{current_step}.bin'))
+        torch.save(states, os.path.join(save_dir, 'last.bin'))
+        print(f'Saved final model at step {current_step}')

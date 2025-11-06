@@ -202,3 +202,14 @@ def train(
             data_loader_eval=data_loaders['data_loader_val'],
             log_wandb=log_wandb,
         )
+    
+    # Save model at the end of training to ensure latest version is always saved
+    states = {
+        'model': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'scheduler': scheduler.state_dict(),
+        'step': current_step,
+    }
+    torch.save(states, os.path.join(save_dir, f'{current_step}.bin'))
+    torch.save(states, os.path.join(save_dir, 'last.bin'))
+    print(f'Saved final model at step {current_step}')
