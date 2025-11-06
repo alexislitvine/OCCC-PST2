@@ -1592,4 +1592,4 @@ class OccCANINE:
             use_amp=use_amp,
         )
 
-        # TODO: We should save the model here - relevant for small sample finetuning, where default save_interval is not met frequently enough
+        # Model is now automatically saved at the end of training (see seq2seq_mixer_engine.py)
