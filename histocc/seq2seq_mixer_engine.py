@@ -19,6 +19,38 @@ from .model_assets import Seq2SeqMixerOccCANINE
 from .loss import LossMixer
 
 
+def _save_model_checkpoint(
+        model: Seq2SeqMixerOccCANINE,
+        optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler.LRScheduler,
+        current_step: int,
+        save_dir: str,
+        dataset_map_code_label: dict,
+        ) -> None:
+    """Helper function to save model checkpoint.
+    
+    Args:
+        model: The model to save (will be unwrapped if DDP)
+        optimizer: The optimizer state to save
+        scheduler: The scheduler state to save
+        current_step: Current training step
+        save_dir: Directory to save checkpoints
+        dataset_map_code_label: Dataset label mapping
+    """
+    # Unwrap DDP model if needed
+    model_to_save = getattr(model, 'module', model)
+    
+    states = {
+        'model': model_to_save.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'scheduler': scheduler.state_dict(),
+        'step': current_step,
+        'key': dataset_map_code_label,
+    }
+    torch.save(states, os.path.join(save_dir, f'{current_step}.bin'))
+    torch.save(states, os.path.join(save_dir, 'last.bin'))
+
+
 def train_one_epoch(
         model: Seq2SeqMixerOccCANINE,
         data_loader: torch.utils.data.DataLoader,
@@ -127,17 +159,14 @@ def train_one_epoch(
             # print(f'Max. memory allocated/reserved: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f}/{torch.cuda.max_memory_reserved() / (1024 ** 3):.2f} GB')
 
         if save_interval is not None and current_step % save_interval == 0 and is_main_process:
-            # Save only from main process and unwrap DDP model if needed
-            model_to_save = getattr(model, 'module', model)
-            states = {
-                'model': model_to_save.state_dict(),
-                'optimizer': optimizer.state_dict(),
-                'scheduler': scheduler.state_dict(),
-                'step': current_step,
-                'key': data_loader.dataset.map_code_label,
-            }
-            torch.save(states, os.path.join(save_dir, f'{current_step}.bin'))
-            torch.save(states, os.path.join(save_dir, 'last.bin'))
+            _save_model_checkpoint(
+                model=model,
+                optimizer=optimizer,
+                scheduler=scheduler,
+                current_step=current_step,
+                save_dir=save_dir,
+                dataset_map_code_label=data_loader.dataset.map_code_label,
+            )
 
         if eval_interval is not None and current_step % eval_interval == 0 and is_main_process:
             print('Starting eval pass')
@@ -300,15 +329,12 @@ def train(
     
     # Save model at the end of training to ensure latest version is always saved
     if is_main_process:
-        # Save only from main process and unwrap DDP model if needed
-        model_to_save = getattr(model, 'module', model)
-        states = {
-            'model': model_to_save.state_dict(),
-            'optimizer': optimizer.state_dict(),
-            'scheduler': scheduler.state_dict(),
-            'step': current_step,
-            'key': data_loaders['data_loader_train'].dataset.map_code_label,
-        }
-        torch.save(states, os.path.join(save_dir, f'{current_step}.bin'))
-        torch.save(states, os.path.join(save_dir, 'last.bin'))
+        _save_model_checkpoint(
+            model=model,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            current_step=current_step,
+            save_dir=save_dir,
+            dataset_map_code_label=data_loaders['data_loader_train'].dataset.map_code_label,
+        )
         print(f'Saved final model at step {current_step}')
