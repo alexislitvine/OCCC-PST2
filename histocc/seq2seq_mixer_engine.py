@@ -128,7 +128,7 @@ def train_one_epoch(
 
         if save_interval is not None and current_step % save_interval == 0 and is_main_process:
             # Save only from main process and unwrap DDP model if needed
-            model_to_save = model.module if distributed else model
+            model_to_save = getattr(model, 'module', model)
             states = {
                 'model': model_to_save.state_dict(),
                 'optimizer': optimizer.state_dict(),
@@ -301,7 +301,7 @@ def train(
     # Save model at the end of training to ensure latest version is always saved
     if is_main_process:
         # Save only from main process and unwrap DDP model if needed
-        model_to_save = model.module if distributed else model
+        model_to_save = getattr(model, 'module', model)
         states = {
             'model': model_to_save.state_dict(),
             'optimizer': optimizer.state_dict(),
