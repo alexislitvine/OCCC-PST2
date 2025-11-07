@@ -45,13 +45,20 @@ def convert_csv_to_parquet(
     print(f"Converting {csv_path} to {parquet_path}...")
     
     # Read CSV with appropriate settings
-    read_kwargs = {}
+    read_kwargs = {'low_memory': False}  # Avoid mixed type inference warnings
     if dtype_overrides:
         read_kwargs['dtype'] = dtype_overrides
     if converters:
         read_kwargs['converters'] = converters
     
     df = pd.read_csv(csv_path, **read_kwargs)
+    
+    # Convert all object dtype columns to string to avoid PyArrow mixed type errors
+    # This handles cases where a column might have mixed int/str values (e.g., RowID with both '1' and 'id_1')
+    # For training data, all object columns should be strings anyway (text descriptions, codes, etc.)
+    for col in df.columns:
+        if df[col].dtype == 'object':
+            df[col] = df[col].astype(str)
     
     # Write to Parquet with optimal settings
     df.to_parquet(
@@ -135,6 +142,7 @@ def get_hisco_dtype_overrides() -> dict:
         Dictionary mapping column names to dtypes
     """
     return {
+        'RowID': str,  # Ensure RowID is always string to avoid mixed types
         'lang': str,
         'code1': str,
         'code2': str,
@@ -166,6 +174,7 @@ def get_occ1950_dtype_overrides() -> dict:
         Dictionary mapping column names to dtypes
     """
     return {
+        'RowID': str,  # Ensure RowID is always string to avoid mixed types
         'lang': str,
         'OCC1950_1': str,
         'OCC1950_2': str,

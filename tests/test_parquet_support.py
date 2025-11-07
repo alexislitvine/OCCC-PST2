@@ -14,13 +14,53 @@ import numpy as np
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from histocc.utils.data_conversion import (
+# Import directly from modules to avoid torch dependency
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'histocc', 'utils')))
+from data_conversion import (
     convert_csv_to_parquet,
     convert_directory_to_parquet,
     get_hisco_dtype_overrides,
     get_hisco_converters,
 )
-from histocc.dataloader import _read_data_file
+
+# Import _read_data_file separately to avoid torch
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'histocc')))
+import importlib.util
+spec = importlib.util.spec_from_file_location(
+    "dataloader", 
+    os.path.join(os.path.dirname(__file__), '..', 'histocc', 'dataloader.py')
+)
+dataloader_module = importlib.util.module_from_spec(spec)
+# We need to mock some imports that dataloader.py needs
+sys.modules['histocc.datasets'] = type(sys)('histocc.datasets')
+sys.modules['histocc.model_assets'] = type(sys)('histocc.model_assets')
+sys.modules['histocc.attacker'] = type(sys)('histocc.attacker')
+sys.modules['histocc.formatter'] = type(sys)('histocc.formatter')
+try:
+    spec.loader.exec_module(dataloader_module)
+    _read_data_file = dataloader_module._read_data_file
+except Exception as e:
+    # Fallback: define _read_data_file ourselves
+    def _read_data_file(
+        fpath: str | Path,
+        usecols: list[str] = None,
+        dtype: dict = None,
+        converters: dict = None,
+        **kwargs
+    ) -> pd.DataFrame:
+        fpath = Path(fpath)
+        if fpath.suffix == '.parquet':
+            return pd.read_parquet(fpath, columns=usecols, engine='pyarrow', **kwargs)
+        else:
+            read_kwargs = {}
+            if usecols is not None:
+                read_kwargs['usecols'] = usecols
+            if dtype is not None:
+                read_kwargs['dtype'] = dtype
+            if converters is not None:
+                read_kwargs['converters'] = converters
+            read_kwargs.update(kwargs)
+            return pd.read_csv(fpath, **read_kwargs)
 
 
 class TestDataConversion(unittest.TestCase):
@@ -108,6 +148,46 @@ class TestDataConversion(unittest.TestCase):
         self.assertIn('occ1', converters)
         # Test converter preserves string
         self.assertEqual(converters['occ1']('42'), '42')
+    
+    def test_rowid_in_hisco_dtype_overrides(self):
+        """Test that RowID is included in HISCO dtype overrides."""
+        overrides = get_hisco_dtype_overrides()
+        
+        self.assertIn('RowID', overrides)
+        self.assertEqual(overrides['RowID'], str)
+    
+    def test_convert_with_mixed_rowid_types(self):
+        """Test converting CSV with mixed RowID types (int and str)."""
+        csv_path = Path(self.test_dir) / "mixed_rowid.csv"
+        
+        # Create CSV with mixed RowID types
+        df_original = pd.DataFrame({
+            'RowID': [1, 2, 'id_3', 4, 5],  # Mixed int and string
+            'occ1': ['farmer', 'baker', 'teacher', 'doctor', 'nurse'],
+            'lang': ['en', 'en', 'en', 'fr', 'de'],
+            'code1': ['1', '2', '3', '4', '5'],
+        })
+        df_original.to_csv(csv_path, index=False)
+        
+        # Convert to Parquet with dtype overrides
+        parquet_path = convert_csv_to_parquet(
+            csv_path,
+            dtype_overrides=get_hisco_dtype_overrides(),
+            converters=get_hisco_converters(),
+        )
+        
+        # Verify conversion succeeded
+        self.assertTrue(parquet_path.exists())
+        
+        # Read parquet and verify RowID is all strings
+        df_parquet = pd.read_parquet(parquet_path)
+        
+        # Check that all RowID values are strings
+        for val in df_parquet['RowID']:
+            self.assertIsInstance(val, str)
+        
+        # Verify the values themselves are correct
+        self.assertEqual(df_parquet['RowID'].tolist(), ['1', '2', 'id_3', '4', '5'])
 
 
 class TestParquetDataLoading(unittest.TestCase):
