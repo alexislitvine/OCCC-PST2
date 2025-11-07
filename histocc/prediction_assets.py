@@ -727,7 +727,7 @@ class OccCANINE:
             batch_time.update(time.time() - end)
 
             if batch_idx % 1 == 0 and verbose:
-                print(f'\rFinished prediction for batch {batch_idx} of {total_batches}', end = "")
+                print(f'\rFinished prediction for batch {batch_idx} of {total_batches}', end="", flush=True)
 
             end = time.time()
 
@@ -852,7 +852,7 @@ class OccCANINE:
             batch_time.update(time.time() - end)
 
             if batch_idx % 1 == 0 and verbose:
-                print(f'\rFinished prediction for batch {batch_idx} of {total_batches}', end = "")
+                print(f'\rFinished prediction for batch {batch_idx} of {total_batches}', end="", flush=True)
 
             end = time.time()
 
@@ -947,7 +947,7 @@ class OccCANINE:
             batch_time.update(time.time() - end)
 
             if batch_idx % 1 == 0 and verbose:
-                print(f'\rFinished prediction for batch {batch_idx} of {total_batches}', end = "")
+                print(f'\rFinished prediction for batch {batch_idx} of {total_batches}', end="", flush=True)
 
             end = time.time()
 
@@ -996,7 +996,7 @@ class OccCANINE:
             batch_time.update(time.time() - end)
 
             if batch_idx % 1 == 0 and verbose:
-                print(f'\rFinished prediction for batch {batch_idx} of {total_batches}', end = "")
+                print(f'\rFinished prediction for batch {batch_idx} of {total_batches}', end="", flush=True)
 
             end = time.time()
 
