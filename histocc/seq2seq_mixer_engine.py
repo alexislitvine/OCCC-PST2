@@ -155,7 +155,6 @@ def train_one_epoch(
 
         if is_main_process and (batch_idx % log_interval == 0 or batch_idx == last_step):
             # Calculate ETA
-            elapsed_time = time.time() - end + batch_time.avg * (batch_idx + 1)
             batches_remaining = len(data_loader) - (batch_idx + 1)
             eta_seconds = batches_remaining * batch_time.avg
             eta_str = f"{int(eta_seconds // 60)}m{int(eta_seconds % 60):02d}s"

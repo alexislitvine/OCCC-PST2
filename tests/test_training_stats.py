@@ -15,6 +15,9 @@ def test_module_compilation():
     """Test that modified modules compile successfully"""
     print("Testing module compilation...")
     
+    # Get the base directory (parent of tests directory)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
     modules_to_test = [
         'histocc/seq2seq_mixer_engine.py',
         'histocc/seq2seq_engine.py',
@@ -23,7 +26,8 @@ def test_module_compilation():
     
     for module in modules_to_test:
         try:
-            py_compile.compile(module, doraise=True)
+            module_path = os.path.join(base_dir, module)
+            py_compile.compile(module_path, doraise=True)
             print(f"✓ {module} compiles successfully")
         except py_compile.PyCompileError as e:
             print(f"✗ {module} compilation error: {e}")
@@ -39,8 +43,11 @@ def test_training_functions_exist():
     """Test that key training functions are defined"""
     print("\nTesting function definitions...")
     
+    # Get the base directory (parent of tests directory)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
     # Test seq2seq_mixer_engine.py
-    with open('histocc/seq2seq_mixer_engine.py', 'r') as f:
+    with open(os.path.join(base_dir, 'histocc/seq2seq_mixer_engine.py'), 'r') as f:
         content = f.read()
     
     required_functions = [
@@ -58,7 +65,7 @@ def test_training_functions_exist():
             return False
     
     # Test seq2seq_engine.py
-    with open('histocc/seq2seq_engine.py', 'r') as f:
+    with open(os.path.join(base_dir, 'histocc/seq2seq_engine.py'), 'r') as f:
         content = f.read()
     
     required_functions = [
@@ -75,7 +82,7 @@ def test_training_functions_exist():
             return False
     
     # Test trainer.py
-    with open('histocc/trainer.py', 'r') as f:
+    with open(os.path.join(base_dir, 'histocc/trainer.py'), 'r') as f:
         content = f.read()
     
     required_functions = [
@@ -101,8 +108,11 @@ def test_stats_logging_improvements():
     """Test that enhanced logging features are present"""
     print("\nTesting logging improvements...")
     
+    # Get the base directory (parent of tests directory)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
     # Test seq2seq_mixer_engine.py
-    with open('histocc/seq2seq_mixer_engine.py', 'r') as f:
+    with open(os.path.join(base_dir, 'histocc/seq2seq_mixer_engine.py'), 'r') as f:
         content = f.read()
     
     improvements = [
@@ -123,7 +133,7 @@ def test_stats_logging_improvements():
             return False
     
     # Test seq2seq_engine.py
-    with open('histocc/seq2seq_engine.py', 'r') as f:
+    with open(os.path.join(base_dir, 'histocc/seq2seq_engine.py'), 'r') as f:
         content = f.read()
     
     improvements = [
@@ -141,7 +151,7 @@ def test_stats_logging_improvements():
             return False
     
     # Test trainer.py
-    with open('histocc/trainer.py', 'r') as f:
+    with open(os.path.join(base_dir, 'histocc/trainer.py'), 'r') as f:
         content = f.read()
     
     improvements = [
@@ -164,8 +174,11 @@ def test_backward_compatibility():
     """Test that function signatures remain compatible"""
     print("\nTesting backward compatibility...")
     
+    # Get the base directory (parent of tests directory)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
     # Check that train_one_epoch signature in seq2seq_mixer_engine.py still has key parameters
-    with open('histocc/seq2seq_mixer_engine.py', 'r') as f:
+    with open(os.path.join(base_dir, 'histocc/seq2seq_mixer_engine.py'), 'r') as f:
         content = f.read()
     
     # Find train_one_epoch function
