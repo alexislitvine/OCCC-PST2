@@ -76,7 +76,11 @@ def train_epoch(model, data_loader, loss_fn, optimizer, device, scheduler, verbo
         if verbose:
             # Print detailed information after each batch
             eta_str = eta(start_time, batch_idx, capN = len(data_loader))
-            print(f"\rBatch {batch_idx+1}/{len(data_loader)} - Loss: {loss.item():.4f}, Acc: {batch_accuracy:.4f}, ETA: {eta_str}", end="")
+            current_avg_loss = np.mean(losses[-min(num_batches_to_average, len(losses)):]) if losses else loss.item()
+            print(f"\rBatch {batch_idx+1}/{len(data_loader)} | "
+                  f"Loss: {loss.item():.4f} (avg: {current_avg_loss:.4f}) | "
+                  f"Acc: {batch_accuracy:.4f} | "
+                  f"ETA: {eta_str}", end="")
 
 
     if verbose:
@@ -163,9 +167,15 @@ def run_eval(model, data, loss_fn, device, reference_loss, history, train_acc, t
         device,
     )
 
-    print(f"Val   loss {val_loss}, accuracy {val_acc}")
-
-    print(f"Reference loss: {reference_loss}")
+    print('\n' + '='*80)
+    print('EVALUATION RESULTS')
+    print('='*80)
+    print(f'Validation Loss     : {val_loss:.4f}')
+    print(f'Validation Accuracy : {val_acc:.4f}')
+    print(f'Training Loss       : {train_loss:.4f}')
+    print(f'Training Accuracy   : {train_acc:.4f}')
+    print(f'Reference Loss      : {reference_loss:.4f}')
+    print('='*80 + '\n')
 
     # Store stats to history
     history['train_acc'].append(train_acc)
@@ -209,8 +219,9 @@ def trainer_loop(
     for epoch in range(epochs):
 
         # Show details
-        print("----------")
+        print('\n' + '='*80)
         print(f"Epoch {epoch + 1}/{epochs}")
+        print('='*80)
 
 
         # Switch when below reference loss
@@ -362,8 +373,9 @@ def trainer_loop_simple(
     for epoch in range(epochs):
 
         # Show details
-        print("----------")
+        print('\n' + '='*80)
         print(f"Epoch {epoch + 1}/{epochs}")
+        print('='*80)
 
         # Switch when below reference loss
         if(attack_switch):
@@ -428,7 +440,14 @@ def run_eval_simple(model, data, loss_fn, device, history, train_acc, train_loss
         device,
     )
 
-    print(f"Val loss {val_loss}, accuracy {val_acc}")
+    print('\n' + '='*80)
+    print('EVALUATION RESULTS')
+    print('='*80)
+    print(f'Validation Loss     : {val_loss:.4f}')
+    print(f'Validation Accuracy : {val_acc:.4f}')
+    print(f'Training Loss       : {train_loss:.4f}')
+    print(f'Training Accuracy   : {train_acc:.4f}')
+    print('='*80 + '\n')
 
     # Store stats to history
     history['train_acc'].append(train_acc)

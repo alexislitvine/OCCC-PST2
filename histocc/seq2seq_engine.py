@@ -80,9 +80,26 @@ def train_one_epoch(
         samples_per_sec.update(outputs.size(0) / elapsed)
 
         if batch_idx % log_interval == 0 or batch_idx == last_step:
-            print(f'Batch {batch_idx + 1} of {len(data_loader)}. Batch time (data): {batch_time.avg:.2f} ({batch_time_data.avg:.2f}). Train loss: {losses.avg:.2f}')
-            # print(f'Samples/second: {samples_per_sec.avg:.2f}')
-            # print(f'Max. memory allocated/reserved: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f}/{torch.cuda.max_memory_reserved() / (1024 ** 3):.2f} GB')
+            # Calculate ETA
+            elapsed_time = time.time() - end + batch_time.avg * (batch_idx + 1)
+            batches_remaining = len(data_loader) - (batch_idx + 1)
+            eta_seconds = batches_remaining * batch_time.avg
+            eta_str = f"{int(eta_seconds // 60)}m{int(eta_seconds % 60):02d}s"
+            
+            # Get current learning rate
+            current_lr = scheduler.get_last_lr()[0]
+            
+            print(f'Batch {batch_idx + 1}/{len(data_loader)} | '
+                  f'Loss: {losses.avg:.4f} | '
+                  f'LR: {current_lr:.2e} | '
+                  f'Batch time: {batch_time.avg:.2f}s (data: {batch_time_data.avg:.2f}s) | '
+                  f'Samples/sec: {samples_per_sec.avg:.1f} | '
+                  f'ETA: {eta_str}')
+            
+            # Print GPU memory stats if using CUDA
+            if torch.cuda.is_available():
+                print(f'  GPU Memory - Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB | '
+                      f'Reserved: {torch.cuda.max_memory_reserved() / (1024 ** 3):.2f} GB')
 
         if save_interval is not None and current_step % save_interval == 0:
             states = {
@@ -95,12 +112,25 @@ def train_one_epoch(
             torch.save(states, os.path.join(save_dir, 'last.bin'))
 
         if eval_interval is not None and current_step % eval_interval == 0:
+            print('\n' + '='*80)
+            print('Starting evaluation pass...')
             eval_loss, eval_seq_acc, eval_token_acc = evaluate(
                 model=model,
                 data_loader=data_loader_eval,
                 loss_fn=loss_fn,
                 device=device,
             )
+            
+            # Print evaluation summary
+            print('='*80)
+            print(f'EVALUATION RESULTS (Step {current_step})')
+            print('='*80)
+            print(f'Validation Loss     : {eval_loss:.4f}')
+            print(f'Training Loss       : {losses.avg:.4f}')
+            print(f'Sequence Accuracy   : {eval_seq_acc:.2f}%')
+            print(f'Token Accuracy      : {eval_token_acc:.2f}%')
+            print(f'Learning Rate       : {scheduler.get_last_lr()[0]:.2e}')
+            print('='*80 + '\n')
 
             update_summary(
                 current_step,
@@ -185,7 +215,9 @@ def train(
         log_wandb: bool = False,
         ):
     while current_step < total_steps:
-        print(f'Completed {current_step} of {total_steps} steps. Starting new epoch.')
+        print('\n' + '='*80)
+        print(f'Starting new epoch (Step {current_step}/{total_steps} - {100*current_step/total_steps:.1f}% complete)')
+        print('='*80)
 
         current_step = train_one_epoch(
             model,
@@ -212,4 +244,6 @@ def train(
     }
     torch.save(states, os.path.join(save_dir, f'{current_step}.bin'))
     torch.save(states, os.path.join(save_dir, 'last.bin'))
-    print(f'Saved final model at step {current_step}')
+    print('\n' + '='*80)
+    print(f'TRAINING COMPLETE - Final model saved at step {current_step}')
+    print('='*80)
