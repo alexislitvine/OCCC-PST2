@@ -15,7 +15,12 @@ def test_seq2seq_mixer_engine_uses_tqdm_write():
     """Test that seq2seq_mixer_engine.py uses tqdm.write for logging during training"""
     print("Testing tqdm.write usage in seq2seq_mixer_engine.py...")
     
-    with open('histocc/seq2seq_mixer_engine.py', 'r') as f:
+    # Get the project root directory
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(test_dir)
+    engine_path = os.path.join(project_root, 'histocc', 'seq2seq_mixer_engine.py')
+    
+    with open(engine_path, 'r') as f:
         content = f.read()
     
     # Check that tqdm is imported
