@@ -54,7 +54,8 @@ def convert_csv_to_parquet(
     df = pd.read_csv(csv_path, **read_kwargs)
     
     # Convert all object dtype columns to string to avoid PyArrow mixed type errors
-    # This handles cases where a column might have mixed int/str values
+    # This handles cases where a column might have mixed int/str values (e.g., RowID with both '1' and 'id_1')
+    # For training data, all object columns should be strings anyway (text descriptions, codes, etc.)
     for col in df.columns:
         if df[col].dtype == 'object':
             df[col] = df[col].astype(str)
