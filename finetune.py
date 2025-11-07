@@ -24,6 +24,7 @@ from histocc import (
     BlockOrderInvariantLoss,
     LossMixer,
 )
+from histocc.dataloader import _read_data_file
 from histocc.seq2seq_mixer_engine import train
 from histocc.formatter import (
     BlockyFormatter,
@@ -221,7 +222,9 @@ def prepare_data(
 
     # Load
     print(f'Loading data from {dataset}...')
-    data: pd.DataFrame = pd.read_csv(dataset, dtype=str)
+    # _read_data_file automatically detects CSV vs Parquet format
+    # For Parquet, types are preserved from the file; for CSV we read as strings
+    data: pd.DataFrame = _read_data_file(dataset, dtype=str)
     print(f'Loaded {len(data):,} observations.')
 
     # Select columns
