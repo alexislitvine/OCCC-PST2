@@ -165,17 +165,17 @@ def train_one_epoch(
             # Get current learning rate
             current_lr = scheduler.get_last_lr()[0]
             
-            print(f'[Epoch {epoch}] Batch {batch_idx + 1}/{len(data_loader)} | '
-                  f'Loss: {losses.avg:.6f} | '
-                  f'LR: {current_lr:.2e} | '
-                  f'Batch time: {batch_time.avg:.2f}s (data: {batch_time_data.avg:.2f}s) | '
-                  f'Samples/sec: {samples_per_sec.avg:.1f} | '
-                  f'ETA: {eta_str}')
+            tqdm.write(f'[Epoch {epoch}] Batch {batch_idx + 1}/{len(data_loader)} | '
+                       f'Loss: {losses.avg:.6f} | '
+                       f'LR: {current_lr:.2e} | '
+                       f'Batch time: {batch_time.avg:.2f}s (data: {batch_time_data.avg:.2f}s) | '
+                       f'Samples/sec: {samples_per_sec.avg:.1f} | '
+                       f'ETA: {eta_str}')
             
             # Print GPU memory stats if using CUDA
             if has_cuda:
-                print(f'  GPU Memory - Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB | '
-                      f'Reserved: {torch.cuda.max_memory_reserved() / (1024 ** 3):.2f} GB')
+                tqdm.write(f'  GPU Memory - Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB | '
+                           f'Reserved: {torch.cuda.max_memory_reserved() / (1024 ** 3):.2f} GB')
 
         if save_interval is not None and current_step % save_interval == 0 and is_main_process:
             _save_model_checkpoint(
@@ -188,8 +188,8 @@ def train_one_epoch(
             )
 
         if eval_interval is not None and current_step % eval_interval == 0 and is_main_process:
-            print('\n' + '='*80)
-            print('Starting evaluation pass...')
+            tqdm.write('\n' + '='*80)
+            tqdm.write('Starting evaluation pass...')
             eval_loss, eval_loss_linear, eval_loss_seq2seq, eval_seq_acc, eval_token_acc, eval_flat_acc = evaluate(
                 model=model,
                 data_loader=data_loader_eval,
@@ -199,16 +199,16 @@ def train_one_epoch(
             model.train()
             
             # Print evaluation summary
-            print('='*80)
-            print(f'EVALUATION RESULTS (Step {current_step})')
-            print('='*80)
-            print(f'Validation Loss     : {eval_loss:.6f} (Linear: {eval_loss_linear:.6f}, Seq2Seq: {eval_loss_seq2seq:.6f})')
-            print(f'Training Loss       : {losses.avg:.6f}')
-            print(f'Sequence Accuracy   : {eval_seq_acc:.2f}%')
-            print(f'Token Accuracy      : {eval_token_acc:.2f}%')
-            print(f'Flat Accuracy       : {eval_flat_acc:.2f}%')
-            print(f'Learning Rate       : {scheduler.get_last_lr()[0]:.2e}')
-            print('='*80 + '\n')
+            tqdm.write('='*80)
+            tqdm.write(f'EVALUATION RESULTS (Step {current_step})')
+            tqdm.write('='*80)
+            tqdm.write(f'Validation Loss     : {eval_loss:.6f} (Linear: {eval_loss_linear:.6f}, Seq2Seq: {eval_loss_seq2seq:.6f})')
+            tqdm.write(f'Training Loss       : {losses.avg:.6f}')
+            tqdm.write(f'Sequence Accuracy   : {eval_seq_acc:.2f}%')
+            tqdm.write(f'Token Accuracy      : {eval_token_acc:.2f}%')
+            tqdm.write(f'Flat Accuracy       : {eval_flat_acc:.2f}%')
+            tqdm.write(f'Learning Rate       : {scheduler.get_last_lr()[0]:.2e}')
+            tqdm.write('='*80 + '\n')
 
             update_summary(
                 current_step,
@@ -301,11 +301,11 @@ def evaluate(
         flat_accs.update(acc_flat, preds_linear.size(0))
 
         if batch_idx % log_interval == 0:
-            print(f'  Eval Batch {batch_idx + 1}/{len(data_loader)} | '
-                  f'Seq Acc: {seq_accs.avg:.2f}% | '
-                  f'Token Acc: {token_accs.avg:.2f}% | '
-                  f'Flat Acc: {flat_accs.avg:.2f}% | '
-                  f'Val Loss: {losses.avg:.6f}')
+            tqdm.write(f'  Eval Batch {batch_idx + 1}/{len(data_loader)} | '
+                       f'Seq Acc: {seq_accs.avg:.2f}% | '
+                       f'Token Acc: {token_accs.avg:.2f}% | '
+                       f'Flat Acc: {flat_accs.avg:.2f}% | '
+                       f'Val Loss: {losses.avg:.6f}')
 
     return losses.avg, losses_linear.avg, losses_seq2seq.avg, seq_accs.avg, token_accs.avg, flat_accs.avg
 
