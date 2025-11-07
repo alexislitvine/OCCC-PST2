@@ -12,6 +12,7 @@ import os
 import random
 
 from functools import partial
+from pathlib import Path
 from typing import Callable
 
 import torch
@@ -36,6 +37,53 @@ from .formatter import (
     BlockyOCC1950Formatter,
     BlockyFormatter,
 )
+
+
+def _read_data_file(
+    fpath: str | Path,
+    usecols: list[str] = None,
+    dtype: dict = None,
+    converters: dict = None,
+    **kwargs
+) -> pd.DataFrame:
+    """
+    Read a data file, automatically detecting format (CSV or Parquet).
+    
+    This function provides a unified interface for reading both CSV and Parquet files,
+    with Parquet providing significantly faster loading times.
+    
+    Args:
+        fpath: Path to the data file (CSV or Parquet)
+        usecols: List of columns to read (for CSV and Parquet)
+        dtype: Dictionary of column dtypes (for CSV)
+        converters: Dictionary of converter functions (for CSV)
+        **kwargs: Additional arguments passed to the reader
+        
+    Returns:
+        DataFrame with the loaded data
+    """
+    fpath = Path(fpath)
+    
+    if fpath.suffix == '.parquet':
+        # Read Parquet file - much faster than CSV
+        return pd.read_parquet(
+            fpath,
+            columns=usecols,
+            engine='pyarrow',
+            **kwargs
+        )
+    else:
+        # Fall back to CSV reading
+        read_kwargs = {}
+        if usecols is not None:
+            read_kwargs['usecols'] = usecols
+        if dtype is not None:
+            read_kwargs['dtype'] = dtype
+        if converters is not None:
+            read_kwargs['converters'] = converters
+        read_kwargs.update(kwargs)
+        
+        return pd.read_csv(fpath, **read_kwargs)
 
 
 # Returns training data path
@@ -616,10 +664,10 @@ class OccDatasetV2InMem(OccDatasetV2):
         if isinstance(target_cols, str):
             target_cols = self.map_type_target_cols_default[target_cols]
 
-        self.frame = pd.read_csv(
+        self.frame = _read_data_file(
             fname_data,
-            dtype={'lang': str, **{x: str for x in target_cols}},
             usecols=['occ1', 'lang', *target_cols],
+            dtype={'lang': str, **{x: str for x in target_cols}},
         )
 
         super().__init__(
@@ -665,7 +713,7 @@ class OccDatasetV2InMemMultipleFiles(OccDatasetV2):
             target_cols = self.map_type_target_cols_default[target_cols]
 
         frames = [
-            pd.read_csv(
+            _read_data_file(
                 f,
                 usecols=['occ1', 'lang', *target_cols],
                 dtype={'lang': str, **{x: str for x in target_cols}},
@@ -720,7 +768,7 @@ class OccDatasetMixerInMemMultipleFiles(OccDatasetV2):
             target_cols = self.map_type_target_cols_default[target_cols]
 
         frames = [
-            pd.read_csv(
+            _read_data_file(
                 f,
                 usecols=['occ1', 'lang', *target_cols],
                 dtype={'lang': str, **{x: str for x in target_cols}},
