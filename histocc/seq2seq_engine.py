@@ -36,6 +36,9 @@ def train_one_epoch(
     batch_time = Averager()
     batch_time_data = Averager()
     samples_per_sec = Averager()
+    
+    # Check GPU availability once
+    has_cuda = torch.cuda.is_available()
 
     # Need to initialize first "end time", as this is
     # calculated at bottom of batch loop
@@ -96,7 +99,7 @@ def train_one_epoch(
                   f'ETA: {eta_str}')
             
             # Print GPU memory stats if using CUDA
-            if torch.cuda.is_available():
+            if has_cuda:
                 print(f'  GPU Memory - Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB | '
                       f'Reserved: {torch.cuda.max_memory_reserved() / (1024 ** 3):.2f} GB')
 
