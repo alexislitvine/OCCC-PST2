@@ -67,8 +67,8 @@ def convert_csv_to_parquet(
     print(f"  CSV size: {csv_size:.2f} MB")
     print(f"  Parquet size: {parquet_size:.2f} MB")
     
-    # Avoid division by zero
-    if parquet_size > 0:
+    # Avoid division by zero - handle empty files gracefully
+    if parquet_size > 0 and csv_size > 0:
         compression_ratio = csv_size / parquet_size
         print(f"  Compression ratio: {compression_ratio:.2f}x")
     else:

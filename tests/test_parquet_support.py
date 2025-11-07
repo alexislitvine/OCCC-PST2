@@ -198,7 +198,10 @@ class TestParquetDataLoading(unittest.TestCase):
         # Parquet should be faster (but we'll be lenient for CI)
         # In practice, Parquet is often 2-10x faster
         print(f"CSV time: {csv_time:.3f}s, Parquet time: {parquet_time:.3f}s")
-        print(f"Speedup: {csv_time/parquet_time:.2f}x")
+        if parquet_time > 0:
+            print(f"Speedup: {csv_time/parquet_time:.2f}x")
+        else:
+            print("Speedup: Unable to measure (instant load)")
         
         # Just verify both methods work correctly
         pd.testing.assert_frame_equal(df_csv, df_parquet)
