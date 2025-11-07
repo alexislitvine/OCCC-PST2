@@ -79,7 +79,7 @@ def parse_args() -> argparse.Namespace:
 
     # Model and optimizer parameters
     parser.add_argument('--learning-rate', type=float, default=2e-05)
-    parser.add_argument('--warmup-steps', type=int, default=0)
+    parser.add_argument('--warmup-pct', type=float, default=0.05, help='Warmup steps as percentage of total steps (default: 0.05 = 5%%)')
     parser.add_argument('--dropout', type=float, default=0.0, help='Classifier dropout rate. Does not affect encoder.')
     parser.add_argument('--max-len', type=int, default=128, help='Max. number of characters for input')
     parser.add_argument('--decoder-dim-feedforward', type=int, default=None, help='Defaults to endoder hidden dim if not specified.')
@@ -177,6 +177,11 @@ def load_states(
 def main():
     args = parse_args()
 
+    # Enable TF32 for improved performance on Ampere GPUs
+    if torch.cuda.is_available():
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+
     if args.log_wandb:
         wandb_init(
             output_dir=args.save_dir,
@@ -229,9 +234,10 @@ def main():
 
     optimizer = AdamW(model.parameters(), lr=args.learning_rate)
     total_steps = len(data_loader_train) * args.num_epochs
+    num_warmup_steps = int(total_steps * args.warmup_pct)
     scheduler = get_linear_schedule_with_warmup(
         optimizer,
-        num_warmup_steps=args.warmup_steps,
+        num_warmup_steps=num_warmup_steps,
         num_training_steps=total_steps,
     )
 

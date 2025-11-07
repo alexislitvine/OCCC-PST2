@@ -38,7 +38,7 @@ def parse_args():
     # Model and optimizer parameters
     parser.add_argument('--learning-rate', type=float, default=2e-05)
     parser.add_argument('--seq2seq-weight', type=float, default=0.1)
-    parser.add_argument('--warmup-steps', type=int, default=0)
+    parser.add_argument('--warmup-pct', type=float, default=0.05, help='Warmup steps as percentage of total steps (default: 0.05 = 5%%)')
 
     # Model initialization
     parser.add_argument('--initial-checkpoint', type=str, default=None, help='Model weights to use for initialization. Discarded if resume state exists at --save-path')
@@ -84,7 +84,7 @@ def main():
         share_val=args.share_val,
         learning_rate=args.learning_rate,
         num_epochs=args.num_epochs,
-        warmup_steps=args.warmup_steps,
+        warmup_pct=args.warmup_pct,
         seq2seq_weight=args.seq2seq_weight,
         freeze_encoder=args.freeze_encoder,
         num_workers=args.num_workers,
