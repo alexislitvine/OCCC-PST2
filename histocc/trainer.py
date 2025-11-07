@@ -167,8 +167,14 @@ def save_history_to_csv(history, model_name):
     
     csv_path = "../Tmp training plots/" + model_name + "_history.csv"
     
+    # Extract metric lists
+    train_loss = history.get('train_loss', [])
+    train_acc = history.get('train_acc', [])
+    val_loss = history.get('val_loss', [])
+    val_acc = history.get('val_acc', [])
+    
     # Determine the number of epochs
-    num_epochs = len(history.get('train_loss', []))
+    num_epochs = len(train_loss)
     
     if num_epochs == 0:
         return
@@ -182,11 +188,12 @@ def save_history_to_csv(history, model_name):
         for epoch in range(num_epochs):
             row = OrderedDict()
             row['epoch'] = epoch + 1
-            row['train_loss'] = history.get('train_loss', [])[epoch] if epoch < len(history.get('train_loss', [])) else ''
-            row['train_acc'] = history.get('train_acc', [])[epoch] if epoch < len(history.get('train_acc', [])) else ''
-            row['val_loss'] = history.get('val_loss', [])[epoch] if epoch < len(history.get('val_loss', [])) else ''
-            row['val_acc'] = history.get('val_acc', [])[epoch] if epoch < len(history.get('val_acc', [])) else ''
+            row['train_loss'] = train_loss[epoch] if epoch < len(train_loss) else ''
+            row['train_acc'] = train_acc[epoch] if epoch < len(train_acc) else ''
+            row['val_loss'] = val_loss[epoch] if epoch < len(val_loss) else ''
+            row['val_acc'] = val_acc[epoch] if epoch < len(val_acc) else ''
             writer.writerow(row)
+
 
 
 def run_eval(model, data, loss_fn, device, reference_loss, history, train_acc, train_loss, model_name):
