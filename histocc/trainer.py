@@ -6,8 +6,9 @@ Created on Wed Aug 16 13:33:15 2023
 
 import os
 import time
+import csv
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 import torch
 
@@ -158,6 +159,36 @@ def plot_progress(train_losses, val_losses, train_acc, val_acc, reference_loss, 
     plt.close()
 
 
+def save_history_to_csv(history, model_name):
+    """Save training history to CSV file for later analysis and plotting"""
+    # Create directory if it doesn't exist
+    if not os.path.exists("../Tmp training plots"):
+        os.makedirs("../Tmp training plots")
+    
+    csv_path = "../Tmp training plots/" + model_name + "_history.csv"
+    
+    # Determine the number of epochs
+    num_epochs = len(history.get('train_loss', []))
+    
+    if num_epochs == 0:
+        return
+    
+    # Write header and data
+    with open(csv_path, mode='w', newline='') as f:
+        fieldnames = ['epoch', 'train_loss', 'train_acc', 'val_loss', 'val_acc']
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for epoch in range(num_epochs):
+            row = OrderedDict()
+            row['epoch'] = epoch + 1
+            row['train_loss'] = history.get('train_loss', [])[epoch] if epoch < len(history.get('train_loss', [])) else ''
+            row['train_acc'] = history.get('train_acc', [])[epoch] if epoch < len(history.get('train_acc', [])) else ''
+            row['val_loss'] = history.get('val_loss', [])[epoch] if epoch < len(history.get('val_loss', [])) else ''
+            row['val_acc'] = history.get('val_acc', [])[epoch] if epoch < len(history.get('val_acc', [])) else ''
+            writer.writerow(row)
+
+
 def run_eval(model, data, loss_fn, device, reference_loss, history, train_acc, train_loss, model_name):
     # Get model performance (accuracy and loss)
     val_acc, val_loss = eval_model(
@@ -192,6 +223,9 @@ def run_eval(model, data, loss_fn, device, reference_loss, history, train_acc, t
         reference_loss = reference_loss,
         model_name = model_name
         )
+    
+    # Save history to CSV for later analysis
+    save_history_to_csv(history, model_name)
 
     return history, val_acc
 
@@ -464,5 +498,8 @@ def run_eval_simple(model, data, loss_fn, device, history, train_acc, train_loss
         reference_loss = 0,
         model_name = model_name
         )
+    
+    # Save history to CSV for later analysis
+    save_history_to_csv(history, model_name)
 
     return history, val_acc, val_loss
