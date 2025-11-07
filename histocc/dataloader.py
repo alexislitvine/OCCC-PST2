@@ -668,6 +668,7 @@ class OccDatasetV2InMem(OccDatasetV2):
             fname_data,
             usecols=['occ1', 'lang', *target_cols],
             dtype={'lang': str, **{x: str for x in target_cols}},
+            converters={'occ1': lambda x: x},
         )
 
         super().__init__(

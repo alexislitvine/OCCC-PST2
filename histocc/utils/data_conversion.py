@@ -9,7 +9,6 @@ which significantly improves data loading performance by:
 - Type preservation
 """
 
-import os
 from pathlib import Path
 from typing import Union, List
 import pandas as pd
@@ -67,7 +66,13 @@ def convert_csv_to_parquet(
     parquet_size = parquet_path.stat().st_size / (1024 * 1024)  # MB
     print(f"  CSV size: {csv_size:.2f} MB")
     print(f"  Parquet size: {parquet_size:.2f} MB")
-    print(f"  Compression ratio: {csv_size/parquet_size:.2f}x")
+    
+    # Avoid division by zero
+    if parquet_size > 0:
+        compression_ratio = csv_size / parquet_size
+        print(f"  Compression ratio: {compression_ratio:.2f}x")
+    else:
+        print(f"  Compression ratio: N/A (empty file)")
     
     return parquet_path
 

@@ -141,6 +141,12 @@ def main():
                 print("\n✗ No files were converted")
                 sys.exit(1)
     
+    except KeyboardInterrupt:
+        print("\n\n✗ Conversion interrupted by user", file=sys.stderr)
+        sys.exit(130)
+    except (IOError, OSError) as e:
+        print(f"\n✗ File I/O error: {e}", file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
         print(f"\n✗ Error: {e}", file=sys.stderr)
         import traceback
