@@ -5,6 +5,7 @@ to avoid progress bar output interference.
 """
 import os
 import sys
+import re
 
 # Add the parent directory to the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,9 +27,10 @@ def test_seq2seq_mixer_engine_uses_tqdm_write():
     # Split content into lines for analysis
     lines = content.split('\n')
     
-    # Find the train_one_epoch function
+    # Find the train_one_epoch and evaluate functions
     in_train_one_epoch = False
     in_evaluate = False
+    tqdm_iterator_found = False
     issues = []
     
     for i, line in enumerate(lines, 1):
@@ -36,47 +38,39 @@ def test_seq2seq_mixer_engine_uses_tqdm_write():
         if line.startswith('def train_one_epoch('):
             in_train_one_epoch = True
             in_evaluate = False
+            tqdm_iterator_found = False
         elif line.startswith('def evaluate('):
             in_evaluate = True
             in_train_one_epoch = False
         elif line.startswith('def ') and not line.strip().startswith('def _'):
             in_train_one_epoch = False
             in_evaluate = False
+            tqdm_iterator_found = False
         
-        # Check for problematic print statements in train_one_epoch and evaluate
-        if (in_train_one_epoch or in_evaluate) and 'print(' in line:
-            # Exclude comments
-            if not line.strip().startswith('#'):
-                # Check if it's within the training loop (after tqdm iterator creation)
-                # We allow print statements that are outside the loop
-                if in_train_one_epoch and i > 89:  # After tqdm iterator line
-                    issues.append(f"Line {i}: Found print() in train_one_epoch after tqdm initialization: {line.strip()}")
-                elif in_evaluate:
-                    issues.append(f"Line {i}: Found print() in evaluate function: {line.strip()}")
+        # Detect when tqdm iterator is created
+        if in_train_one_epoch and 'tqdm(data_loader' in line:
+            tqdm_iterator_found = True
+        
+        # Check for problematic print statements after tqdm iterator creation
+        if (in_train_one_epoch and tqdm_iterator_found) or in_evaluate:
+            # Look for print( that is not in a comment
+            if re.search(r'^\s*[^#]*\bprint\s*\(', line):
+                issues.append(f"Line {i}: Found print() statement that should use tqdm.write(): {line.strip()}")
     
-    # Check that tqdm.write is used for batch logging
-    if 'tqdm.write(f\'[Epoch {epoch}] Batch' not in content:
-        issues.append("Batch logging should use tqdm.write")
-    else:
-        print("✓ Batch logging uses tqdm.write")
+    # Use regex patterns to check for tqdm.write usage (more robust than exact string matching)
+    # Note: patterns are flexible to handle multi-line strings and minor format changes
+    tqdm_write_patterns = [
+        (r'tqdm\.write\(f\'\[Epoch.*Batch', "Batch logging"),
+        (r'tqdm\.write\(f\'  Eval Batch', "Evaluation batch logging"),
+        (r'tqdm\.write\(f\'  GPU Memory', "GPU memory logging"),
+        (r'tqdm\.write\(f\'EVALUATION RESULTS', "Evaluation results header"),
+    ]
     
-    # Check that tqdm.write is used for evaluation logging
-    if 'tqdm.write(f\'  Eval Batch' not in content:
-        issues.append("Evaluation batch logging should use tqdm.write")
-    else:
-        print("✓ Evaluation batch logging uses tqdm.write")
-    
-    # Check that tqdm.write is used for GPU memory logging
-    if 'tqdm.write(f\'  GPU Memory' not in content:
-        issues.append("GPU memory logging should use tqdm.write")
-    else:
-        print("✓ GPU memory logging uses tqdm.write")
-    
-    # Check that tqdm.write is used for evaluation summary
-    if 'tqdm.write(f\'EVALUATION RESULTS' not in content:
-        issues.append("Evaluation results should use tqdm.write")
-    else:
-        print("✓ Evaluation results use tqdm.write")
+    for pattern, description in tqdm_write_patterns:
+        if re.search(pattern, content):
+            print(f"✓ {description} uses tqdm.write")
+        else:
+            issues.append(f"{description} should use tqdm.write")
     
     if issues:
         print("\n✗ Issues found:")
