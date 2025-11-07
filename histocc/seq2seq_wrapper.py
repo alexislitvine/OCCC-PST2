@@ -62,11 +62,17 @@ class Seq2SeqOccCANINEWrapper(OccCANINE):
             save_model = True,
             save_path = '../OccCANINE/Finetuned/',
             ):
+        # Enable TF32 for improved performance on Ampere GPUs
+        if torch.cuda.is_available():
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+        
         optimizer = AdamW(self.model.parameters(), lr=2*10**-5)
         total_steps = len(processed_data['data_loader_train']) * epochs
+        num_warmup_steps = int(total_steps * 0.05)  # 5% warmup
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=0,
+            num_warmup_steps=num_warmup_steps,
             num_training_steps=total_steps,
         )
 

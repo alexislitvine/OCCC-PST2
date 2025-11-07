@@ -1417,7 +1417,7 @@ class OccCANINE:
             share_val: float = 0.1,
             learning_rate: float = 2e-05,
             num_epochs: int = 3,
-            warmup_steps: int = 500,
+            warmup_pct: float = 0.05,
             seq2seq_weight: float = 0.1,
             freeze_encoder: bool = True,
             num_workers: int = 0,
@@ -1444,7 +1444,7 @@ class OccCANINE:
         - share_val (float): Proportion of the dataset to use for validation.
         - learning_rate (float): Learning rate for the optimizer.
         - num_epochs (int): Number of epochs to train the model.
-        - warmup_steps (int): Number of warmup steps for the learning rate scheduler.
+        - warmup_pct (float): Warmup steps as percentage of total steps (default: 0.05 = 5%).
         - seq2seq_weight (float): Weight for the seq2seq loss in the mixed loss function.
         - freeze_encoder (bool): If True, freezes the encoder parameters during training. (Only the top layer will be trained)
         - num_workers (int): Number of workers for data loading. Default is 0 (main process only).
@@ -1545,10 +1545,16 @@ class OccCANINE:
         else:
             optimizer = AdamW(self.model.parameters(), lr=learning_rate)
 
+        # Enable TF32 for improved performance on Ampere GPUs
+        if torch.cuda.is_available():
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+
         total_steps = len(data_loader_train) * num_epochs
+        num_warmup_steps = int(total_steps * warmup_pct)
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=warmup_steps,
+            num_warmup_steps=num_warmup_steps,
             num_training_steps=total_steps,
         )
 
