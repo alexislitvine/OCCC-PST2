@@ -24,7 +24,6 @@ from histocc import (
     BlockOrderInvariantLoss,
     LossMixer,
 )
-from histocc.dataloader import _read_data_file
 from histocc.seq2seq_mixer_engine import train
 from histocc.formatter import (
     BlockyFormatter,
@@ -114,21 +113,13 @@ def parse_args():
 
 
 def check_if_data_prepared(save_path: str) -> dict[str, int] | None:
-    # Check for parquet files first (preferred format)
-    has_parquet = (
-        os.path.isfile(os.path.join(save_path, 'data_train.parquet')) and
-        os.path.isfile(os.path.join(save_path, 'data_val.parquet')) and
-        os.path.isfile(os.path.join(save_path, 'key.csv'))
-    )
-    
-    # Fall back to CSV if parquet not available
-    has_csv = (
-        os.path.isfile(os.path.join(save_path, 'data_train.csv')) and
-        os.path.isfile(os.path.join(save_path, 'data_val.csv')) and
-        os.path.isfile(os.path.join(save_path, 'key.csv'))
-    )
-    
-    if not (has_parquet or has_csv):
+    if not os.path.isfile(os.path.join(save_path, 'data_train.csv')):
+        return None
+
+    if not os.path.isfile(os.path.join(save_path, 'data_val.csv')):
+        return None
+
+    if not os.path.isfile(os.path.join(save_path, 'key.csv')):
         return None
 
     mapping_df = pd.read_csv(
@@ -222,10 +213,7 @@ def prepare_data(
 
     # Load
     print(f'Loading data from {dataset}...')
-    # _read_data_file automatically detects CSV vs Parquet format based on file extension
-    # For CSV: dtype=str ensures all columns are read as strings
-    # For Parquet: dtype parameter is ignored; types are preserved from parquet metadata
-    data: pd.DataFrame = _read_data_file(dataset, dtype=str)
+    data: pd.DataFrame = pd.read_csv(dataset, dtype=str)
     print(f'Loaded {len(data):,} observations.')
 
     # Select columns
@@ -266,15 +254,10 @@ def prepare_data(
 
     # Save datasets & mapping in specified fine-tuning folder
     print(f'Saving prepared data to {save_path}...')
-    # Save as both CSV and Parquet for backward compatibility and performance
     data_train.to_csv(os.path.join(save_path, 'data_train.csv'), index=False)
     data_val.to_csv(os.path.join(save_path, 'data_val.csv'), index=False)
-    data_train.to_parquet(os.path.join(save_path, 'data_train.parquet'), index=False, engine='pyarrow')
-    data_val.to_parquet(os.path.join(save_path, 'data_val.parquet'), index=False, engine='pyarrow')
     mapping_df.to_csv(os.path.join(save_path, 'key.csv'), index=False)
-    print('Data files saved successfully:')
-    print('  - CSV: data_train.csv, data_val.csv, key.csv')
-    print('  - Parquet: data_train.parquet, data_val.parquet')
+    print('Data files saved successfully (data_train.csv, data_val.csv, key.csv).')
 
     return mapping
 
@@ -288,12 +271,8 @@ def setup_datasets(
         map_code_label: dict[str, int],
         distributed: bool = False,
 ) -> tuple[OccDatasetMixerInMemMultipleFiles, OccDatasetMixerInMemMultipleFiles]:
-    # Use parquet files if available for faster loading, otherwise fall back to CSV
-    train_file = 'data_train.parquet' if os.path.isfile(os.path.join(save_path, 'data_train.parquet')) else 'data_train.csv'
-    val_file = 'data_val.parquet' if os.path.isfile(os.path.join(save_path, 'data_val.parquet')) else 'data_val.csv'
-    
     dataset_train = OccDatasetMixerInMemMultipleFiles(
-        fnames_data=[os.path.join(save_path, train_file)],
+        fnames_data=[os.path.join(save_path, 'data_train.csv')],
         formatter=formatter,
         tokenizer=tokenizer,
         max_input_len=128,
@@ -304,7 +283,7 @@ def setup_datasets(
     )
 
     dataset_val = OccDatasetMixerInMemMultipleFiles(
-        fnames_data=[os.path.join(save_path, val_file)],
+        fnames_data=[os.path.join(save_path, 'data_val.csv')],
         formatter=formatter,
         tokenizer=tokenizer,
         max_input_len=128,
@@ -395,8 +374,9 @@ def main():
     if args.prepare_only:
         if is_main_process():
             print(f"Data preparation complete. Files written to {args.save_path}:")
-            print(f"  - CSV: data_train.csv, data_val.csv, key.csv")
-            print(f"  - Parquet: data_train.parquet, data_val.parquet")
+            print(f"  - data_train.csv")
+            print(f"  - data_val.csv")
+            print(f"  - key.csv")
             print("Exiting due to --prepare-only flag (skipping model/dataloaders/training)")
         
         # Synchronize all processes before cleanup
