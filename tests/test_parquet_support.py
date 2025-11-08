@@ -39,6 +39,7 @@ sys.modules['histocc.formatter'] = type(sys)('histocc.formatter')
 try:
     spec.loader.exec_module(dataloader_module)
     _read_data_file = dataloader_module._read_data_file
+    _get_column_names = dataloader_module._get_column_names
 except Exception as e:
     # Fallback: define _read_data_file ourselves
     def _read_data_file(
@@ -61,6 +62,13 @@ except Exception as e:
                 read_kwargs['converters'] = converters
             read_kwargs.update(kwargs)
             return pd.read_csv(fpath, **read_kwargs)
+    
+    def _get_column_names(fpath: str | Path) -> pd.Index:
+        fpath = Path(fpath)
+        if fpath.suffix == '.parquet':
+            return pd.read_parquet(fpath, engine='pyarrow').columns
+        else:
+            return pd.read_csv(fpath, nrows=1).columns
 
 
 class TestDataConversion(unittest.TestCase):
@@ -338,6 +346,86 @@ class TestBackwardCompatibility(unittest.TestCase):
         )
         
         pd.testing.assert_frame_equal(df_original, df)
+
+
+class TestGetColumnNames(unittest.TestCase):
+    """Test the _get_column_names helper function."""
+    
+    def setUp(self):
+        """Create temporary directory for test files."""
+        self.test_dir = tempfile.mkdtemp()
+        
+    def tearDown(self):
+        """Clean up temporary directory."""
+        shutil.rmtree(self.test_dir)
+    
+    def test_get_column_names_from_csv(self):
+        """Test getting column names from CSV file."""
+        csv_path = Path(self.test_dir) / "test.csv"
+        df = pd.DataFrame({
+            'occ1': ['farmer', 'baker'],
+            'lang': ['en', 'en'],
+            'code1': ['1', '2'],
+            'code2': ['3', '4'],
+        })
+        df.to_csv(csv_path, index=False)
+        
+        # Get column names
+        columns = _get_column_names(csv_path)
+        
+        # Verify columns match
+        self.assertEqual(list(columns), ['occ1', 'lang', 'code1', 'code2'])
+        self.assertIsInstance(columns, pd.Index)
+    
+    def test_get_column_names_from_parquet(self):
+        """Test getting column names from Parquet file."""
+        parquet_path = Path(self.test_dir) / "test.parquet"
+        df = pd.DataFrame({
+            'occ1': ['farmer', 'baker'],
+            'lang': ['en', 'en'],
+            'code1': ['1', '2'],
+            'code2': ['3', '4'],
+        })
+        df.to_parquet(parquet_path, index=False, engine='pyarrow')
+        
+        # Get column names
+        columns = _get_column_names(parquet_path)
+        
+        # Verify columns match
+        self.assertEqual(list(columns), ['occ1', 'lang', 'code1', 'code2'])
+        self.assertIsInstance(columns, pd.Index)
+    
+    def test_csv_and_parquet_columns_match(self):
+        """Test that column names from CSV and Parquet are identical."""
+        csv_path = Path(self.test_dir) / "test.csv"
+        parquet_path = Path(self.test_dir) / "test.parquet"
+        
+        df = pd.DataFrame({
+            'occ1': ['farmer', 'baker', '42'],
+            'lang': ['en', 'fr', 'de'],
+            'code1': ['1', '2', '3'],
+            'code2': ['4', '5', '6'],
+            'code3': ['7', '8', '9'],
+        })
+        df.to_csv(csv_path, index=False)
+        df.to_parquet(parquet_path, index=False, engine='pyarrow')
+        
+        csv_columns = _get_column_names(csv_path)
+        parquet_columns = _get_column_names(parquet_path)
+        
+        # Verify they match
+        self.assertEqual(list(csv_columns), list(parquet_columns))
+    
+    def test_get_column_names_with_string_path(self):
+        """Test that function works with string paths (not just Path objects)."""
+        csv_path = Path(self.test_dir) / "test.csv"
+        df = pd.DataFrame({'col1': [1], 'col2': [2]})
+        df.to_csv(csv_path, index=False)
+        
+        # Pass string path instead of Path object
+        columns = _get_column_names(str(csv_path))
+        
+        self.assertEqual(list(columns), ['col1', 'col2'])
 
 
 if __name__ == '__main__':
