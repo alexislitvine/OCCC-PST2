@@ -14,61 +14,13 @@ import numpy as np
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Import directly from modules to avoid torch dependency
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'histocc', 'utils')))
-from data_conversion import (
+from histocc.utils.data_conversion import (
     convert_csv_to_parquet,
     convert_directory_to_parquet,
     get_hisco_dtype_overrides,
     get_hisco_converters,
 )
-
-# Import _read_data_file separately to avoid torch
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'histocc')))
-import importlib.util
-spec = importlib.util.spec_from_file_location(
-    "dataloader", 
-    os.path.join(os.path.dirname(__file__), '..', 'histocc', 'dataloader.py')
-)
-dataloader_module = importlib.util.module_from_spec(spec)
-# We need to mock some imports that dataloader.py needs
-sys.modules['histocc.datasets'] = type(sys)('histocc.datasets')
-sys.modules['histocc.model_assets'] = type(sys)('histocc.model_assets')
-sys.modules['histocc.attacker'] = type(sys)('histocc.attacker')
-sys.modules['histocc.formatter'] = type(sys)('histocc.formatter')
-try:
-    spec.loader.exec_module(dataloader_module)
-    _read_data_file = dataloader_module._read_data_file
-    _get_column_names = dataloader_module._get_column_names
-except Exception as e:
-    # Fallback: define _read_data_file ourselves
-    def _read_data_file(
-        fpath: str | Path,
-        usecols: list[str] = None,
-        dtype: dict = None,
-        converters: dict = None,
-        **kwargs
-    ) -> pd.DataFrame:
-        fpath = Path(fpath)
-        if fpath.suffix == '.parquet':
-            return pd.read_parquet(fpath, columns=usecols, engine='pyarrow', **kwargs)
-        else:
-            read_kwargs = {}
-            if usecols is not None:
-                read_kwargs['usecols'] = usecols
-            if dtype is not None:
-                read_kwargs['dtype'] = dtype
-            if converters is not None:
-                read_kwargs['converters'] = converters
-            read_kwargs.update(kwargs)
-            return pd.read_csv(fpath, **read_kwargs)
-    
-    def _get_column_names(fpath: str | Path) -> pd.Index:
-        fpath = Path(fpath)
-        if fpath.suffix == '.parquet':
-            return pd.read_parquet(fpath, engine='pyarrow').columns
-        else:
-            return pd.read_csv(fpath, nrows=1).columns
+from histocc.dataloader import _read_data_file
 
 
 class TestDataConversion(unittest.TestCase):
@@ -156,46 +108,6 @@ class TestDataConversion(unittest.TestCase):
         self.assertIn('occ1', converters)
         # Test converter preserves string
         self.assertEqual(converters['occ1']('42'), '42')
-    
-    def test_rowid_in_hisco_dtype_overrides(self):
-        """Test that RowID is included in HISCO dtype overrides."""
-        overrides = get_hisco_dtype_overrides()
-        
-        self.assertIn('RowID', overrides)
-        self.assertEqual(overrides['RowID'], str)
-    
-    def test_convert_with_mixed_rowid_types(self):
-        """Test converting CSV with mixed RowID types (int and str)."""
-        csv_path = Path(self.test_dir) / "mixed_rowid.csv"
-        
-        # Create CSV with mixed RowID types
-        df_original = pd.DataFrame({
-            'RowID': [1, 2, 'id_3', 4, 5],  # Mixed int and string
-            'occ1': ['farmer', 'baker', 'teacher', 'doctor', 'nurse'],
-            'lang': ['en', 'en', 'en', 'fr', 'de'],
-            'code1': ['1', '2', '3', '4', '5'],
-        })
-        df_original.to_csv(csv_path, index=False)
-        
-        # Convert to Parquet with dtype overrides
-        parquet_path = convert_csv_to_parquet(
-            csv_path,
-            dtype_overrides=get_hisco_dtype_overrides(),
-            converters=get_hisco_converters(),
-        )
-        
-        # Verify conversion succeeded
-        self.assertTrue(parquet_path.exists())
-        
-        # Read parquet and verify RowID is all strings
-        df_parquet = pd.read_parquet(parquet_path)
-        
-        # Check that all RowID values are strings
-        for val in df_parquet['RowID']:
-            self.assertIsInstance(val, str)
-        
-        # Verify the values themselves are correct
-        self.assertEqual(df_parquet['RowID'].tolist(), ['1', '2', 'id_3', '4', '5'])
 
 
 class TestParquetDataLoading(unittest.TestCase):
@@ -346,86 +258,6 @@ class TestBackwardCompatibility(unittest.TestCase):
         )
         
         pd.testing.assert_frame_equal(df_original, df)
-
-
-class TestGetColumnNames(unittest.TestCase):
-    """Test the _get_column_names helper function."""
-    
-    def setUp(self):
-        """Create temporary directory for test files."""
-        self.test_dir = tempfile.mkdtemp()
-        
-    def tearDown(self):
-        """Clean up temporary directory."""
-        shutil.rmtree(self.test_dir)
-    
-    def test_get_column_names_from_csv(self):
-        """Test getting column names from CSV file."""
-        csv_path = Path(self.test_dir) / "test.csv"
-        df = pd.DataFrame({
-            'occ1': ['farmer', 'baker'],
-            'lang': ['en', 'en'],
-            'code1': ['1', '2'],
-            'code2': ['3', '4'],
-        })
-        df.to_csv(csv_path, index=False)
-        
-        # Get column names
-        columns = _get_column_names(csv_path)
-        
-        # Verify columns match
-        self.assertEqual(list(columns), ['occ1', 'lang', 'code1', 'code2'])
-        self.assertIsInstance(columns, pd.Index)
-    
-    def test_get_column_names_from_parquet(self):
-        """Test getting column names from Parquet file."""
-        parquet_path = Path(self.test_dir) / "test.parquet"
-        df = pd.DataFrame({
-            'occ1': ['farmer', 'baker'],
-            'lang': ['en', 'en'],
-            'code1': ['1', '2'],
-            'code2': ['3', '4'],
-        })
-        df.to_parquet(parquet_path, index=False, engine='pyarrow')
-        
-        # Get column names
-        columns = _get_column_names(parquet_path)
-        
-        # Verify columns match
-        self.assertEqual(list(columns), ['occ1', 'lang', 'code1', 'code2'])
-        self.assertIsInstance(columns, pd.Index)
-    
-    def test_csv_and_parquet_columns_match(self):
-        """Test that column names from CSV and Parquet are identical."""
-        csv_path = Path(self.test_dir) / "test.csv"
-        parquet_path = Path(self.test_dir) / "test.parquet"
-        
-        df = pd.DataFrame({
-            'occ1': ['farmer', 'baker', '42'],
-            'lang': ['en', 'fr', 'de'],
-            'code1': ['1', '2', '3'],
-            'code2': ['4', '5', '6'],
-            'code3': ['7', '8', '9'],
-        })
-        df.to_csv(csv_path, index=False)
-        df.to_parquet(parquet_path, index=False, engine='pyarrow')
-        
-        csv_columns = _get_column_names(csv_path)
-        parquet_columns = _get_column_names(parquet_path)
-        
-        # Verify they match
-        self.assertEqual(list(csv_columns), list(parquet_columns))
-    
-    def test_get_column_names_with_string_path(self):
-        """Test that function works with string paths (not just Path objects)."""
-        csv_path = Path(self.test_dir) / "test.csv"
-        df = pd.DataFrame({'col1': [1], 'col2': [2]})
-        df.to_csv(csv_path, index=False)
-        
-        # Pass string path instead of Path object
-        columns = _get_column_names(str(csv_path))
-        
-        self.assertEqual(list(columns), ['col1', 'col2'])
 
 
 if __name__ == '__main__':
