@@ -86,6 +86,26 @@ def _read_data_file(
         return pd.read_csv(fpath, **read_kwargs)
 
 
+def _get_column_names(fpath: str | Path) -> pd.Index:
+    """
+    Get column names from a data file (CSV or Parquet).
+    
+    Args:
+        fpath: Path to the data file
+        
+    Returns:
+        Index containing column names
+    """
+    fpath = Path(fpath)
+    
+    if fpath.suffix == '.parquet':
+        # For Parquet, read just the schema without loading data
+        return pd.read_parquet(fpath, engine='pyarrow').columns
+    else:
+        # For CSV, read just one row to get column names
+        return pd.read_csv(fpath, nrows=1).columns
+
+
 # Returns training data path
 def train_path(model_domain): # FIXME move to datasets.py and avoid hardcoded paths
     if model_domain == "DK_CENSUS":
@@ -444,7 +464,16 @@ class OCCDataset(Dataset):
         self.n_obs = n_obs
         self.n_classes = n_classes
         self.formatter = formatter
-        self.colnames = pd.read_csv(df_path, nrows=10).columns.tolist()
+        
+        # Check if Parquet file is being used with byte-offset based dataset
+        if Path(df_path).suffix == '.parquet':
+            raise ValueError(
+                f"OCCDataset does not support Parquet files with byte-offset indexing. "
+                f"Please use OccDatasetV2InMem or OccDatasetV2InMemMultipleFiles for Parquet files, "
+                f"or convert the file to CSV format."
+            )
+        
+        self.colnames = _get_column_names(df_path).tolist()
 
         self.setup_target_formatter()
 
@@ -562,7 +591,15 @@ class OccDatasetV2(Dataset):
             word_freq_table=word_freq_table,
         )
 
-        self.colnames: pd.Index = pd.read_csv(fname_data, nrows=1).columns
+        # Check if Parquet file is being used with byte-offset based dataset
+        if Path(fname_data).suffix == '.parquet':
+            raise ValueError(
+                f"OccDatasetV2 does not support Parquet files with byte-offset indexing. "
+                f"Please use OccDatasetV2InMem or OccDatasetV2InMemMultipleFiles for Parquet files, "
+                f"or convert the file to CSV format."
+            )
+
+        self.colnames: pd.Index = _get_column_names(fname_data)
         self.map_item_byte_index = self._setup_mapping(fname_index)
         # FIXME current impl can mistakenly read an 'occ1' value as an int
         # TODO have `self._get_record` pass in coltypes
