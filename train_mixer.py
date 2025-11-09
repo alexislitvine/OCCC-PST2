@@ -256,6 +256,7 @@ def main():
             pin_memory=args.pin_memory,
         )
     else:
+        train_sampler = None
         data_loader_train = DataLoader(
             dataset_train,
             batch_size=args.batch_size,
@@ -330,6 +331,7 @@ def main():
             'data_loader_train': data_loader_train,
             'data_loader_val': data_loader_val,
         },
+        train_sampler=train_sampler,
         loss_fn=loss_fn,
         optimizer=optimizer,
         device=device,
