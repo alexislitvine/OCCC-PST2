@@ -61,6 +61,7 @@ def parse_args() -> argparse.Namespace:
     # File paths, data & model choices
     parser.add_argument('--save-dir', type=str, default=None)
     parser.add_argument('--save-interval', type=int, default=5000, help='Number of steps between saving model')
+    parser.add_argument('--save-each-epoch', action='store_true', default=False, help='Save model after each epoch instead of after a given number of steps')
     parser.add_argument('--initial-checkpoint', type=str, default=None, help='Model weights to use for initialization. Discarded if resume state exists at --save-dir')
     parser.add_argument('--only-encoder', action='store_true', default=False, help='Only attempt to load encoder part of --initial-checkpoint')
 
@@ -342,6 +343,7 @@ def main():
         log_interval=args.log_interval,
         eval_interval=args.eval_interval,
         save_interval=args.save_interval,
+        save_each_epoch=args.save_each_epoch,
         log_wandb=args.log_wandb and is_main_process,
         distributed=distributed,
         is_main_process=is_main_process,
