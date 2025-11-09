@@ -96,15 +96,29 @@ class EvalEngine:
     def _acc(self, y_true, y_pred, digits = None):
         '''
         Calculate the accuracy of **one observation**.
-        The accuracy is determined by averaging the proportion of predictions
-        that are in the true values and the proportion of true values that are
-        in the predictions, divided by the maximum number of predictions or true values.
+        The accuracy is determined by averaging precision-like and recall-like metrics:
+        - Precision-like: proportion of predictions that are in the true values
+        - Recall-like: proportion of true values that are in the predictions
+        
+        This provides a balanced measure that doesn't penalize the model for providing
+        multiple predictions when ground truth has fewer codes.
+        
         Parameters:
             y_true (list): A list of true values.
             y_pred (list): A list of predicted values.
             digits (int, optional): The number of digits to use of each occupational code. Defaults to None.
         Returns:
             float: The accuracy score of the observation.
+            
+        Examples:
+            >>> _acc(['A'], ['A', 'B', 'C'])  # 1 correct among 3 predictions
+            0.667  # (1/3 + 1/1) / 2
+            
+            >>> _acc(['A', 'B'], ['A'])  # Found 1 of 2 ground truth
+            0.75   # (1/1 + 1/2) / 2
+            
+            >>> _acc(['A', 'B'], ['A', 'B'])  # Perfect match
+            1.0    # (2/2 + 2/2) / 2
         '''
         if self.no_label:
             return float('NaN')
@@ -118,17 +132,23 @@ class EvalEngine:
         y_true = list(set(y_true))
         y_pred = list(set(y_pred))
 
+        # Handle edge cases
+        if len(y_pred) == 0 and len(y_true) == 0:
+            return 1.0
+        if len(y_pred) == 0 or len(y_true) == 0:
+            return 0.0
+
         # Count number of y_pred in y_true
         pred_in_true = sum([x in y_true for x in y_pred])
 
         # Count number of y_true in y_pred
         true_in_pred = sum([x in y_pred for x in y_true])
 
-        # Max number of preds
-        max_preds = max(len(y_true), len(y_pred))
-
-        # average of the two above divided by max
-        res = (pred_in_true + true_in_pred) / (2 * max_preds)
+        # Calculate average of precision-like and recall-like metrics
+        # This formula doesn't penalize providing more predictions as long as correct ones are included
+        precision_like = pred_in_true / len(y_pred)
+        recall_like = true_in_pred / len(y_true)
+        res = (precision_like + recall_like) / 2
 
         return res
 
