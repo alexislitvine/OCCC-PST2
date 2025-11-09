@@ -1,5 +1,18 @@
 # Settings for training experiments
 
+## Model Checkpointing Options
+
+By default, `train_mixer.py` saves model checkpoints every 5000 steps (controlled by `--save-interval`). 
+
+Alternatively, you can use the `--save-each-epoch` flag to save the model at the end of each epoch instead:
+
+```bash
+# Save after each epoch instead of every N steps
+python train_mixer.py --save-dir /path/to/save --save-each-epoch --train-data ... --val-data ...
+```
+
+**Note:** When `--save-each-epoch` is enabled, step-based saving (via `--save-interval`) is automatically disabled to avoid redundant checkpoints.
+
 ## Data references
 ```
 SET TRAIN_DATA=Z:/faellesmappe/tsdj/hisco/data/Training_data\CA_bcn_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\DK_cedar_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\DK_census_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\DK_orsted_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\EN_ca_ipums_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\EN_loc_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\EN_marr_cert_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\EN_oclack_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\EN_parish_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\EN_patentee_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\EN_PortArthur_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\EN_ship_data_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\EN_uk_ipums_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\EN_us_ipums_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\FR_desc_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\GE_ipums_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\GE_occupational_census_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\GE_occupations1939_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\GE_Selgert_Gottlich_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\HISCO_website_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\HSN_database_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\IS_ipums_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\IT_fm_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\JIW_database_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\NO_ipums_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\SE_cedar_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\SE_chalmers_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\SE_swedpop_train.csv Z:/faellesmappe/tsdj/hisco/data/Training_data\SE_titles_train.csv Z:/faellesmappe/tsdj/hisco/data/Adversarial_data/Adv_data_double_translateFalse.csv Z:/faellesmappe/tsdj/hisco/data/Adversarial_data/Adv_data_double_translateTrue.csv Z:/faellesmappe/tsdj/hisco/data/Adversarial_data/Random_strings.csv Z:/faellesmappe/tsdj/hisco/data/Adversarial_data/Translated_data.csv

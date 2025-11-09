@@ -63,6 +63,7 @@ def train_one_epoch(
         log_interval: int = 100,
         eval_interval: int | None = None,
         save_interval: int | None = None,
+        save_each_epoch: bool = False,
         save_dir: str | None = None,
         data_loader_eval: torch.utils.data.DataLoader | None = None,
         log_wandb: bool = False,
@@ -177,7 +178,7 @@ def train_one_epoch(
                 tqdm.write(f'  GPU Memory - Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB | '
                            f'Reserved: {torch.cuda.max_memory_reserved() / (1024 ** 3):.2f} GB')
 
-        if save_interval is not None and current_step % save_interval == 0 and is_main_process:
+        if save_interval is not None and current_step % save_interval == 0 and is_main_process and not save_each_epoch:
             _save_model_checkpoint(
                 model=model,
                 optimizer=optimizer,
@@ -324,6 +325,7 @@ def train(
         log_interval: int = 100,
         eval_interval: int = 1000,
         save_interval: int = 1000,
+        save_each_epoch: bool = False,
         log_wandb: bool = False,
         distributed: bool = False,
         is_main_process: bool = True,
@@ -355,6 +357,7 @@ def train(
             log_interval=log_interval,
             eval_interval=eval_interval,
             save_interval=save_interval,
+            save_each_epoch=save_each_epoch,
             save_dir=save_dir,
             data_loader_eval=data_loaders['data_loader_val'],
             log_wandb=log_wandb,
@@ -362,6 +365,18 @@ def train(
             is_main_process=is_main_process,
             scaler=scaler,
         )
+        
+        # Save at the end of each epoch if the flag is set
+        if save_each_epoch and is_main_process:
+            _save_model_checkpoint(
+                model=model,
+                optimizer=optimizer,
+                scheduler=scheduler,
+                current_step=current_step,
+                save_dir=save_dir,
+                dataset_map_code_label=data_loaders['data_loader_train'].dataset.map_code_label,
+            )
+            print(f'Model saved at end of epoch {epoch} (step {current_step})')
         
         epoch += 1
     
