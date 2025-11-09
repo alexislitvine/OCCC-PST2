@@ -49,6 +49,7 @@ def wandb_init(
         name: str,
         resume: str,
         config: argparse.Namespace,
+        mode: str = 'offline',
         ):
     _dir = os.path.join('./wandb', pathhash(output_dir))
 
@@ -61,4 +62,5 @@ def wandb_init(
         dir=_dir,
         resume=resume,
         config=config,
+        mode=mode,
         )
