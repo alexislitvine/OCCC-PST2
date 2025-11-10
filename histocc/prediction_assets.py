@@ -1298,7 +1298,9 @@ class OccCANINE:
 
             elif what in ["pred", "bin"]:
                 sepperate_preds = [self._split_str_s2s(i) for i in out.pred_s2s]
-                max_elements = max(len(item) if isinstance(item, list) else 1 for item in sepperate_preds)
+                # Use formatter's max_num_codes to ensure we always create enough columns
+                # for all possible predictions, not just what's in this batch
+                max_elements = self.formatter.max_num_codes
 
                 # Create an empty list to store the processed data
                 processed_data = []
@@ -1356,8 +1358,15 @@ class OccCANINE:
                     # Identify columns starting with 'prob_s2s_'
                     prob_cols = [col for col in out.columns if col.startswith('prob_s2s_')]
 
-                    # Multiply these columns row-wise
-                    res['conf'] = out[prob_cols].prod(axis=1)
+                    # Calculate confidence using geometric mean instead of product
+                    # This avoids very small confidence scores for sequences with many tokens
+                    # Geometric mean: (product of probabilities) ^ (1/n)
+                    num_probs = len(prob_cols)
+                    if num_probs > 0:
+                        res['conf'] = out[prob_cols].prod(axis=1) ** (1.0 / num_probs)
+                    else:
+                        res['conf'] = 1.0
+                    
                     if order_invariant_conf:
                         # Use order invariant if it is >0
                         order_inv_conf = out.order_inv_conf.fillna(0)
