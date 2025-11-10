@@ -26,6 +26,7 @@ def _save_model_checkpoint(
         current_step: int,
         save_dir: str,
         dataset_map_code_label: dict,
+        formatter_config: dict | None = None,
         ) -> None:
     """Helper function to save model checkpoint.
     
@@ -36,6 +37,7 @@ def _save_model_checkpoint(
         current_step: Current training step
         save_dir: Directory to save checkpoints
         dataset_map_code_label: Dataset label mapping
+        formatter_config: Configuration for the formatter (target_cols, block_size, etc.)
     """
     # Unwrap DDP model if needed
     model_to_save = getattr(model, 'module', model)
@@ -47,8 +49,39 @@ def _save_model_checkpoint(
         'step': current_step,
         'key': dataset_map_code_label,
     }
+    
+    # Add formatter configuration if provided
+    if formatter_config is not None:
+        states['formatter_config'] = formatter_config
+    
     torch.save(states, os.path.join(save_dir, f'{current_step}.bin'))
     torch.save(states, os.path.join(save_dir, 'last.bin'))
+
+
+def _extract_formatter_config(formatter):
+    """Extract formatter configuration for saving.
+    
+    Args:
+        formatter: The formatter object
+        
+    Returns:
+        dict: Configuration dictionary with target_cols, block_size, etc.
+    """
+    config = {}
+    
+    # Extract essential attributes
+    if hasattr(formatter, 'target_cols'):
+        config['target_cols'] = formatter.target_cols
+    if hasattr(formatter, 'block_size'):
+        config['block_size'] = formatter.block_size
+    if hasattr(formatter, 'max_num_codes'):
+        config['max_num_codes'] = formatter.max_num_codes
+    if hasattr(formatter, 'within_block_sep'):
+        config['within_block_sep'] = formatter.within_block_sep
+    if hasattr(formatter, 'sep_value'):
+        config['sep_value'] = formatter.sep_value
+        
+    return config
 
 
 def train_one_epoch(
@@ -186,6 +219,7 @@ def train_one_epoch(
                 current_step=current_step,
                 save_dir=save_dir,
                 dataset_map_code_label=data_loader.dataset.map_code_label,
+                formatter_config=_extract_formatter_config(data_loader.dataset.formatter),
             )
 
         if eval_interval is not None and current_step % eval_interval == 0 and is_main_process:
@@ -375,6 +409,7 @@ def train(
                 current_step=current_step,
                 save_dir=save_dir,
                 dataset_map_code_label=data_loaders['data_loader_train'].dataset.map_code_label,
+                formatter_config=_extract_formatter_config(data_loaders['data_loader_train'].dataset.formatter),
             )
             print(f'Model saved at end of epoch {epoch} (step {current_step})')
         
@@ -389,6 +424,7 @@ def train(
             current_step=current_step,
             save_dir=save_dir,
             dataset_map_code_label=data_loaders['data_loader_train'].dataset.map_code_label,
+            formatter_config=_extract_formatter_config(data_loaders['data_loader_train'].dataset.formatter),
         )
         print('\n' + '='*80)
         print(f'TRAINING COMPLETE - Final model saved at step {current_step}')
