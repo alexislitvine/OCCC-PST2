@@ -258,11 +258,24 @@ class OccCANINE:
                 self.code_len = max([len(i) for i in self.key.values()])
 
             # Load general purpose formatter
-            target_cols = target_cols if target_cols is not None else [f"{self.system}_{i}" for i in range(1, 5)]
-            if "chars" in loaded_state.keys():
-                self.formatter = construct_general_purpose_formatter(block_size=self.code_len, target_cols=target_cols, chars=loaded_state['chars'])
+            # First, try to load formatter config from saved state
+            if 'formatter_config' in loaded_state.keys():
+                formatter_cfg = loaded_state['formatter_config']
+                target_cols = target_cols if target_cols is not None else formatter_cfg.get('target_cols', [f"{self.system}_{i}" for i in range(1, 5)])
+                block_size = formatter_cfg.get('block_size', self.code_len)
+                use_within_block_sep_saved = formatter_cfg.get('within_block_sep')
+                # Use saved config if available, otherwise fall back to parameter
+                if use_within_block_sep is None and use_within_block_sep_saved is not None:
+                    use_within_block_sep = (use_within_block_sep_saved is not None)
             else:
-                self.formatter = construct_general_purpose_formatter(block_size=self.code_len, target_cols=target_cols, use_within_block_sep=use_within_block_sep)
+                # Fallback to defaults if no formatter_config saved
+                target_cols = target_cols if target_cols is not None else [f"{self.system}_{i}" for i in range(1, 5)]
+                block_size = self.code_len
+            
+            if "chars" in loaded_state.keys():
+                self.formatter = construct_general_purpose_formatter(block_size=block_size, target_cols=target_cols, chars=loaded_state['chars'])
+            else:
+                self.formatter = construct_general_purpose_formatter(block_size=block_size, target_cols=target_cols, use_within_block_sep=use_within_block_sep)
 
             # Check if use_within_block_sep is set
             if not use_within_block_sep:
